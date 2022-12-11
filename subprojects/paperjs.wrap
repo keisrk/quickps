@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/paperjs/paper.js.git
+revision = develop
+patch_directory = paperjs
+
+[provide]
+dependency_names = paperjs

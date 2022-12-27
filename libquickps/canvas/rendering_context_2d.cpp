@@ -13,5 +13,7 @@ const std::unique_ptr<Context> Canvas::CreateContext() {
   return std::make_unique<Context>(Cairo::Context::create(surface_));
 }
 
+void Canvas::Write(std::filesystem::path &png) { surface_->write_to_png(png); }
+
 } // namespace canvas
 } // namespace quickps

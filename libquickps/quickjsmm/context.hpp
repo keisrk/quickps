@@ -4,8 +4,11 @@
 #include <array>
 #include <libquickps/quickjsmm/value.hpp>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
+#include <typeinfo>
+#include <unordered_map>
 
 namespace quickps {
 namespace quickjs {
@@ -17,50 +20,36 @@ class EsModule;
 
 class Runtime final {
 public:
-  static const Runtime &GetInstance();
+  static void Init();
+  static void Terminate();
+  static Runtime GetInstance();
   static const std::unique_ptr<Context, ContextDeleter> CreateContext();
 
   template <typename T> static void Dtor(T *ptr) {
-    const auto &rt = Runtime::GetInstance();
-    js_free_rt(rt.js_runtime_, ptr);
-  }
-
-  template <typename T> static JSClassID ClassId() {
-    static JSClassID js_point_class_id = 0;
-    if (js_point_class_id == 0)
-      JS_NewClassID(&js_point_class_id);
-
-    return js_point_class_id;
-  }
-
-  template <typename T> static T *GetOpaque(Value value) {
-    auto js_point_class_id = Runtime::ClassId<T>();
-    void *s = JS_GetOpaque(value.value(), js_point_class_id);
-    return static_cast<T *>(s);
-  }
-
-  template <typename T> static void Finalize(Value value) {
-    T *ptr = Runtime::GetOpaque<T>(value);
-    Runtime::Dtor<T>(ptr);
-  }
-
-  template <typename T> static JSClassDef DefineClass(const char *name) {
-    JSClassDef def;
-    def.class_name = name;
-    def.finalizer = [](auto, auto js_val) {
-      Value v(js_val);
-      Runtime::Finalize<T>(v);
-    };
-    return def;
+    auto rt = Runtime::GetInstance();
+    js_free_rt(rt.js_runtime_.value(), ptr);
   }
 
   template <typename T>
   using OpaqueDeleter = std::add_pointer_t<decltype(Dtor<T>)>;
 
+  Runtime(const Runtime &) = delete;
+  Runtime &operator=(const Runtime &) = delete;
+
+  template <typename T> JSClassID ClassId() {
+    size_t id = typeid(T).hash_code();
+
+    if (class_registry_.find(id) == class_registry_.end()) {
+      class_registry_.emplace(id, 0);
+      JS_NewClassID(&class_registry_[id]);
+    }
+
+    return class_registry_[id];
+  }
+
   template <typename T, typename... Ts>
-  static const std::unique_ptr<T, OpaqueDeleter<T>> Ctor(Ts... args) {
-    const auto &rt = Runtime::GetInstance();
-    void *buf = js_mallocz_rt(rt.js_runtime_, sizeof(T));
+  const std::unique_ptr<T, OpaqueDeleter<T>> Ctor(Ts... args) {
+    void *buf = js_mallocz_rt(js_runtime_.value(), sizeof(T));
 
     if (!buf)
       throw Exception();
@@ -69,12 +58,33 @@ public:
     return std::unique_ptr<T, OpaqueDeleter<T>>(ptr, Dtor<T>);
   }
 
-  Runtime(const Runtime &) = delete;
-  Runtime &operator=(const Runtime &) = delete;
+  template <typename T> T *GetOpaque(Value value) {
+    auto js_point_class_id = ClassId<T>();
+    void *s = JS_GetOpaque(value.value(), js_point_class_id);
+    return static_cast<T *>(s);
+  }
+
+  template <typename T> void Finalize(Value value) {
+    T *ptr = GetOpaque<T>(value);
+    Runtime::Dtor<T>(ptr);
+  }
+
+  template <typename T> JSClassDef DefineClass(const char *name) {
+    JSClassDef def;
+    def.class_name = name;
+    def.finalizer = [](auto, auto js_val) {
+      Value v(js_val);
+      Runtime::GetInstance().Finalize<T>(v);
+    };
+
+    JS_NewClass(js_runtime_.value(), ClassId<T>(), &def);
+    return def;
+  }
 
 private:
-  constexpr Runtime(JSRuntime *rt);
-  JSRuntime *js_runtime_;
+  static std::optional<JSRuntime *> js_runtime_;
+  static std::unordered_map<std::size_t, JSClassID> class_registry_;
+  Runtime() {}
 };
 
 template <typename T> using OpaqueDeleter = Runtime::OpaqueDeleter<T>;
@@ -108,7 +118,7 @@ public:
   }
 
   template <typename T> T *GetOpaque(Value value) {
-    auto js_point_class_id = Runtime::ClassId<T>();
+    auto js_point_class_id = Runtime::GetInstance().ClassId<T>();
     void *s = JS_GetOpaque2(GetInstance(), value.value(), js_point_class_id);
     return static_cast<T *>(s);
   }
@@ -117,15 +127,13 @@ public:
   Value CreateOpaque(std::unique_ptr<T, OpaqueDeleter<T>> ptr,
                      Value new_target) {
     // // FIXME: Free proto and obj.
-    auto js_point_class_id = Runtime::ClassId<T>();
+    auto js_point_class_id = Runtime::GetInstance().ClassId<T>();
     auto proto =
         JS_GetPropertyStr(GetInstance(), new_target.value(), "prototype");
     auto obj = JS_NewObjectProtoClass(GetInstance(), proto, js_point_class_id);
     JS_SetOpaque(obj, ptr.release());
     return WrapValue(obj);
   }
-
-  //  void RegisterModule(EsModule esm);
 
   friend class ContextDeleter;
 

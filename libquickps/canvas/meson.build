@@ -1,6 +1,10 @@
 src = files('rendering_context_2d.cpp')
 
-quickjsmm = library('canvas', src,
+canvas = library('canvas', src,
   include_directories : inc,
-  dependencies : [cairo_dep, quickjs_dep],
-  link_with : [quickjsmm])
+  dependencies : [cairo_dep, quickjsmm_dep])
+
+canvas_dep = declare_dependency(
+  include_directories : inc,
+  link_with : [canvas],
+  dependencies : [cairo_dep, quickjsmm_dep])

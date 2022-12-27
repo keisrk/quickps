@@ -7,22 +7,21 @@ using namespace quickps::quickjs;
 
 std::unique_ptr<Point, OpaqueDeleter<Point>> ctor(Context &ctx, ValueIter first,
                                                   ValueIter last) {
-  double fst, snd;
-  ctx.Set(fst, *first++);
-  ctx.Set(snd, *first++);
+  auto x = first++->Get<double>(ctx);
+  auto y = first++->Get<double>(ctx);
 
   if (first != last) {
     throw Exception();
   }
 
-  return Runtime::Ctor<Point>(fst, snd);
+  return Runtime::GetInstance().Ctor<Point>(x, y);
 }
 
 Value norm(Context &ctx, Point *p, ValueIter first, ValueIter last) {
   if (first != last)
     throw Exception();
-  double result = p->norm();
-  return ctx.Get(result);
+
+  return ctx.Get(p->norm());
 }
 
 Value get_x(Context &ctx, Point *p) { return ctx.Get(p->x); }

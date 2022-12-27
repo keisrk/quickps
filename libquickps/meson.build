@@ -4,10 +4,10 @@ subdir('canvas')
 src = files()
 
 quickps = library('quickps', src,
-  dependencies : [paperjs_dep, quickjs_dep],
-  link_with : [quickjsmm])
+  dependencies : [paperjs_dep, quickjsmm_dep])
 
 tests = files(
+  'canvas/rendering_context_2d.test.cpp',
   'quickjsmm/context.test.cpp',
   'quickjsmm/esm.test.cpp',
   'quickjsmm/fixture.cpp',
@@ -17,10 +17,8 @@ tests = files(
 
 unit_test = executable('unit_test', tests,
   include_directories : inc,
-  dependencies : [gtest_dep, paperjs_dep, quickjs_dep, quickjsmm_dep],
-)
+  dependencies : [canvas_dep, gtest_dep, paperjs_dep, quickjsmm_dep])
 
 test('unit test', unit_test,
   protocol : 'gtest',
-  workdir : meson.current_build_dir(),
-)
+  workdir : meson.current_build_dir())

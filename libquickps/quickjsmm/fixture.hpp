@@ -29,6 +29,7 @@ Value get_x(Context &ctx, Point *p);
 void set_x(Context &ctx, Point *p, Value v);
 Value get_y(Context &ctx, Point *p);
 void set_y(Context &ctx, Point *p, Value v);
+
 } // namespace facade
 } // namespace test
 

@@ -4,6 +4,8 @@
 #include <iterator>
 #include <libquickps/quickjsmm/quickjs.hpp>
 #include <optional>
+#include <string>
+#include <type_traits>
 
 namespace quickps {
 namespace quickjs {
@@ -15,7 +17,31 @@ public:
   bool operator==(const Value &other) const;
 
   bool IsException();
+
   JSValue &value();
+
+  template <typename T> T Get(ContextProvider &ctx) {
+    if constexpr (std::is_same<T, bool>::value) {
+      return JS_ToBool(ctx.GetInstance(), js_value_) == 1;
+    } else if constexpr (std::is_same<T, int>::value) {
+      int tmp;
+      JS_ToInt32(ctx.GetInstance(), &tmp, js_value_);
+      return tmp;
+    } else if constexpr (std::is_same<T, double>::value) {
+      double tmp;
+      JS_ToFloat64(ctx.GetInstance(), &tmp, js_value_);
+      return tmp;
+    } else if constexpr (std::is_same<T, std::string>::value) {
+      auto c_str = JS_ToCString(ctx.GetInstance(), js_value_);
+      std::string result(c_str);
+      JS_FreeCString(ctx.GetInstance(), c_str);
+      return result;
+    } else {
+      static_assert(!std::is_same<T, void>::value,
+                    "Value type void is invalid.");
+      static_assert(std::is_same<T, void>::value, "Unsupported value type.");
+    }
+  }
 
 private:
   JSValue js_value_;

@@ -10,12 +10,14 @@ using namespace test;
 
 class QuickJsEsmTest : public ::testing::Test {
 protected:
-  void SetUp() override {}
+  void SetUp() override { Runtime::Init(); }
+  void TearDown() override { Runtime::Terminate(); }
 };
 
-TEST(QuickJsEsmTest, AmendMeLater) {
+TEST_F(QuickJsEsmTest, AmendMeLater) {
+  const auto &ctx = Runtime::CreateContext();
   auto cls = ClassSpec<Point>("Point")
-                 .Constructor<facade::ctor>()
+                 .Constructor<facade::ctor>(2)
                  .Proto(EntryBuilder<Point>()
                             .Name("x")
                             .Getter<facade::get_x>()
@@ -30,24 +32,8 @@ TEST(QuickJsEsmTest, AmendMeLater) {
                             .Name("norm")
                             .Method<facade::norm>(0)
                             .Build());
-  EXPECT_NE(&cls, nullptr);
+  Value v = cls.Register(*ctx);
+  EXPECT_NE(&v, nullptr);
+  JS_FreeValue(ctx->GetInstance(), v.value());
 }
-
-TEST(QuickJsEsmTest, AmendMeLaterLater) {
-  const auto &ctx = Runtime::CreateContext();
-  EXPECT_NE(ctx, Runtime::CreateContext());
-}
-
-TEST(QuickJsEsmTest, AmmendMeLaterLaterLater) {
-  const auto &ctx = Runtime::CreateContext();
-  EXPECT_NE(ctx, Runtime::CreateContext());
-}
-
-TEST(QuickJsEsmTest, AmmendMeLaterLaterLaterLater) {
-  //  auto *p_ptr = Runtime::Ctor<Point>(1.0, 2.0);
-  //  auto *e_ptr = Runtime::Ctor<Edge>();
-  //  Runtime::Dtor<Point>(p_ptr);
-  //  Runtime::Dtor<Edge>(e_ptr);
-}
-
 } // namespace

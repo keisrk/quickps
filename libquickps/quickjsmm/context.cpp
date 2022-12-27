@@ -1,5 +1,4 @@
 #include <libquickps/quickjsmm/context.hpp>
-//#include <unordered_map>
 #include <utility>
 
 namespace quickps {
@@ -36,21 +35,7 @@ void Context::Set(std::string &ref, Value val) {
 
 void Context::FreeValue(JSValue value) { JS_FreeValue(js_context_, value); }
 void Context::FreeString(const char *str) { JS_FreeCString(js_context_, str); }
-/*
-void Context::RegisterModule(EsModule esm) {
-  static std::unordered_map<const char *, int> kRegistry = {};
 
-  auto esm_init = [](JSContext *js_ctx, JSModuleDef *m) {
-    const char *module_name =
-        JS_AtomToCString(js_ctx, JS_GetModuleName(js_ctx, m));
-    const int def = kRegistry[module_name];
-    return def;
-  };
-
-  kRegistry[esm.GetName()] = 42;
-  JS_NewCModule(js_context_, esm.GetName(), esm_init);
-}
-*/
 Value Context::WrapValue(JSValue v) {
   Value value(v);
 
@@ -66,19 +51,34 @@ void ContextDeleter::operator()(Context *ctx) const {
   delete ctx;
 }
 
-const Runtime &Runtime::GetInstance() {
-  static const Runtime kRuntime(JS_NewRuntime());
-  return kRuntime;
+std::optional<JSRuntime *> Runtime::js_runtime_;
+std::unordered_map<std::size_t, JSClassID> Runtime::class_registry_ = {};
+
+void Runtime::Init() {
+  Runtime::js_runtime_ = JS_NewRuntime();
+  Runtime::class_registry_.clear();
+}
+
+void Runtime::Terminate() {
+  JS_FreeRuntime(Runtime::js_runtime_.value());
+  Runtime::js_runtime_.reset();
+  Runtime::class_registry_.clear();
+}
+
+Runtime Runtime::GetInstance() {
+  if (!Runtime::js_runtime_) {
+    throw Exception();
+  }
+
+  return Runtime();
 }
 
 const std::unique_ptr<Context, ContextDeleter> Runtime::CreateContext() {
-  auto &rt = Runtime::GetInstance();
-  JSContext *js_context = JS_NewContext(rt.js_runtime_);
+  auto rt = Runtime::GetInstance();
+  JSContext *js_context = JS_NewContext(rt.js_runtime_.value());
   return std::unique_ptr<Context, ContextDeleter>(new Context(js_context),
                                                   ContextDeleter());
 }
-
-constexpr Runtime::Runtime(JSRuntime *rt) : js_runtime_(rt) {}
 
 } // namespace quickjs
 } // namespace quickps

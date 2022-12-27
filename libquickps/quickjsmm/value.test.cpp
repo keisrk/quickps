@@ -6,7 +6,7 @@ namespace {
 
 using namespace quickps::quickjs;
 
-class QuickJsValueTest : public ::testing::Test {
+class QuickJsValueTest : public ::testing::Test, public ContextProvider {
 protected:
   QuickJsValueTest() : rt_(JS_NewRuntime()), ctx_(JS_NewContext(this->rt_)) {}
   virtual void SetUp() override {
@@ -16,11 +16,9 @@ protected:
     js_values_[3] = JS_NewFloat64(ctx_, 3.14);
     js_values_[4] = JS_NewString(ctx_, "Hello QuickJS");
   }
-  /*
-      if (JS_VALUE_HAS_REF_COUNT(v)) {
-          JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-          if (--p->ref_count <= 0) {
-  */
+
+  JSContext *GetInstance() { return ctx_; }
+
   JSRuntime *rt_;
   JSContext *ctx_;
   JSValue js_values_[5];
@@ -38,4 +36,17 @@ TEST_F(QuickJsValueTest, ArgumentListIsIteratable) {
     EXPECT_EQ(v, Value(js_values_[i++]));
   }
 }
+
+TEST_F(QuickJsValueTest, TypedGetters) {
+  ContextProvider &ctx = *this;
+  ArgumentList args(kArgCount, js_values_);
+  auto it = args.begin();
+  EXPECT_TRUE(it++->Get<bool>(ctx));
+  EXPECT_EQ(it++->Get<int>(ctx), 42);
+  EXPECT_EQ(it++->Get<int>(ctx), 42);
+  EXPECT_EQ(it++->Get<double>(ctx), 3.14);
+  EXPECT_EQ(it++->Get<std::string>(ctx), "Hello QuickJS");
+  EXPECT_EQ(it, args.end());
+}
+
 } // namespace

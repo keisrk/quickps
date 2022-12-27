@@ -119,10 +119,12 @@ private:
 template <class C> class ClassSpec final {
 public:
   constexpr ClassSpec(const char *name)
-      : def_(Runtime::DefineClass<C>(name)), entries_() {}
+      : def_(Runtime::GetInstance().DefineClass<C>(name)), entries_() {}
 
-  template <Ctor<C> CTOR> ClassSpec &Constructor() {
-    constructor_ = [](auto *js_ctx, auto js_base_val, int argc, auto *argv) {
+  template <Ctor<C> CTOR> ClassSpec &Constructor(size_t argc) {
+    ctor_argc_ = argc;
+
+    ctor_ = [](auto *js_ctx, auto js_base_val, int argc, auto *argv) {
       Context ctx(js_ctx);
       Value base_val(js_base_val);
       ArgumentList args(argc, argv);
@@ -138,9 +140,33 @@ public:
     return *this;
   }
 
+  Value Register(Context &ctx) {
+    // FIXME: Free prototype.
+    auto prototype = Value(JS_NewObject(ctx.GetInstance()));
+
+    if (prototype.IsException())
+      throw Exception();
+
+    JS_SetPropertyFunctionList(ctx.GetInstance(), prototype.value(),
+                               entries_.data(), entries_.size());
+    auto class_def =
+        Value(JS_NewCFunction2(ctx.GetInstance(), ctor_, def_.class_name,
+                               ctor_argc_, JS_CFUNC_constructor, 0));
+
+    if (class_def.IsException())
+      throw Exception();
+
+    JS_SetConstructor(ctx.GetInstance(), class_def.value(), prototype.value());
+    JS_SetClassProto(ctx.GetInstance(), Runtime::GetInstance().ClassId<C>(),
+                     prototype.value());
+
+    return class_def;
+  }
+
 private:
   JSClassDef def_;
-  JSCFunction *constructor_ = nullptr;
+  JSCFunction *ctor_ = nullptr;
+  size_t ctor_argc_ = 0;
   std::vector<JSCFunctionListEntry> entries_;
 };
 
@@ -164,6 +190,7 @@ class EsModule final {
 public:
   static EsModuleBuilder Builder(const char *name);
   const char *GetName();
+  void Register(Context &ctx);
 };
 
 } // namespace quickjs

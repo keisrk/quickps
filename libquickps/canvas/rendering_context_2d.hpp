@@ -3,6 +3,7 @@
 
 #include <cairomm/cairomm.h>
 #include <cairomm/surface.h>
+#include <filesystem>
 #include <libquickps/quickjsmm/esm.hpp>
 #include <memory>
 
@@ -25,6 +26,7 @@ public:
   Canvas(const Canvas &) = delete;
   Canvas &operator=(const Canvas &) = delete;
   const std::unique_ptr<Context> CreateContext();
+  void Write(std::filesystem::path &png);
 
 private:
   Cairo::RefPtr<Cairo::ImageSurface> surface_;

@@ -16,7 +16,7 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
 
-#include <quickjs.h>
+#include <quickjs-libc.h>
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

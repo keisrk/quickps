@@ -3,6 +3,7 @@ project('quickps', 'cpp',
   default_options : ['warning_level=3',
                      'cpp_std=c++17'])
 
+add_project_link_arguments(['-lstdc++fs'], language : 'cpp')
 subproject('quickjs')
 subproject('paperjs')
 

@@ -19,18 +19,24 @@ public:
   Point end_;
 };
 
-namespace facade {
-
-using namespace quickps::quickjs;
-std::unique_ptr<Point, OpaqueDeleter<Point>> ctor(Context &ctx, ValueIter first,
-                                                  ValueIter last);
-Value norm(Context &ctx, Point *p, ValueIter first, ValueIter last);
-Value get_x(Context &ctx, Point *p);
-void set_x(Context &ctx, Point *p, Value v);
-Value get_y(Context &ctx, Point *p);
-void set_y(Context &ctx, Point *p, Value v);
-
-} // namespace facade
 } // namespace test
+
+namespace quickps {
+namespace quickjs {
+
+template <>
+std::unique_ptr<test::Point, OpaqueDeleter<test::Point>>
+New<test::Point>(Context &ctx, ValueIter first, ValueIter last);
+
+template <> const Class &GetClass<test::Point>();
+
+template <>
+std::unique_ptr<test::Edge, OpaqueDeleter<test::Edge>>
+New<test::Edge>(Context &ctx, ValueIter first, ValueIter last);
+
+template <> const Class &GetClass<test::Edge>();
+
+} // namespace quickjs
+} // namespace quickps
 
 #endif // QUICKPS_QUICKJSMM_FIXTURE_H_

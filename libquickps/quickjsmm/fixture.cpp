@@ -1,12 +1,16 @@
+#include <libquickps/quickjsmm/esm.hpp>
+#include <libquickps/quickjsmm/facade.hpp>
 #include <libquickps/quickjsmm/fixture.hpp>
 
-namespace test {
-namespace facade {
+namespace quickps {
+namespace quickjs {
 
-using namespace quickps::quickjs;
+using namespace test;
+using namespace test::facade;
 
-std::unique_ptr<Point, OpaqueDeleter<Point>> ctor(Context &ctx, ValueIter first,
-                                                  ValueIter last) {
+template <>
+std::unique_ptr<Point, OpaqueDeleter<Point>>
+New<Point>(Context &ctx, ValueIter first, ValueIter last) {
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
@@ -17,20 +21,38 @@ std::unique_ptr<Point, OpaqueDeleter<Point>> ctor(Context &ctx, ValueIter first,
   return Runtime::GetInstance().Ctor<Point>(x, y);
 }
 
-Value norm(Context &ctx, Point *p, ValueIter first, ValueIter last) {
-  if (first != last)
-    throw Exception();
+template <> const Class &GetClass<Point>() {
+  static Class kClass =
+      ClassBuilder<Point>("Point")
+          .Constructor<New<Point>>(2)
+          .Proto(EntryBuilder<Point>()
+                     .Name("x")
+                     .Getter<get_x>()
+                     .Setter<set_x>()
+                     .Build())
+          .Proto(EntryBuilder<Point>()
+                     .Name("y")
+                     .Getter<get_y>()
+                     .Setter<set_y>()
+                     .Build())
+          .Proto(EntryBuilder<Point>().Name("norm").Method<norm>(0).Build())
+          .Build();
 
-  return ctx.Get(p->norm());
+  return kClass;
 }
 
-Value get_x(Context &ctx, Point *p) { return ctx.Get(p->x); }
+template <>
+std::unique_ptr<Edge, OpaqueDeleter<Edge>> New<Edge>(Context &, ValueIter first,
+                                                     ValueIter last) {
+  first++; //->GetOpaque<Point>(ctx);
+  first++; //->GetOpaque<Point>(ctx);
 
-void set_x(Context &ctx, Point *p, Value v) { return ctx.Set(p->x, v); }
+  if (first != last) {
+    throw Exception();
+  }
 
-Value get_y(Context &ctx, Point *p) { return ctx.Get(p->y); }
+  throw Exception();
+}
 
-void set_y(Context &ctx, Point *p, Value v) { return ctx.Set(p->y, v); }
-
-} // namespace facade
-} // namespace test
+} // namespace quickjs
+} // namespace quickps

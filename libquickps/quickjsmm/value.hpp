@@ -12,29 +12,34 @@ namespace quickjs {
 
 class Value final {
 public:
-  constexpr Value(JSValue value) : js_value_(value) {}
+  static Value GetNull();
+  static Value GetUndefined();
+
+  constexpr Value(JSValue value) : cobj_(value) {}
 
   bool operator==(const Value &other) const;
 
   bool IsException();
 
-  JSValue &value();
+  bool IsUndefined();
+
+  JSValue &cobj();
 
   template <typename T> T Get(ContextProvider &ctx) {
     if constexpr (std::is_same<T, bool>::value) {
-      return JS_ToBool(ctx.GetInstance(), js_value_) == 1;
+      return JS_ToBool(ctx.cobj(), cobj_) == 1;
     } else if constexpr (std::is_same<T, int>::value) {
       int tmp;
-      JS_ToInt32(ctx.GetInstance(), &tmp, js_value_);
+      JS_ToInt32(ctx.cobj(), &tmp, cobj_);
       return tmp;
     } else if constexpr (std::is_same<T, double>::value) {
       double tmp;
-      JS_ToFloat64(ctx.GetInstance(), &tmp, js_value_);
+      JS_ToFloat64(ctx.cobj(), &tmp, cobj_);
       return tmp;
     } else if constexpr (std::is_same<T, std::string>::value) {
-      auto c_str = JS_ToCString(ctx.GetInstance(), js_value_);
+      auto c_str = JS_ToCString(ctx.cobj(), cobj_);
       std::string result(c_str);
-      JS_FreeCString(ctx.GetInstance(), c_str);
+      JS_FreeCString(ctx.cobj(), c_str);
       return result;
     } else {
       static_assert(!std::is_same<T, void>::value,
@@ -44,7 +49,7 @@ public:
   }
 
 private:
-  JSValue js_value_;
+  JSValue cobj_;
 };
 
 using ValueIterator = std::iterator<std::input_iterator_tag, Value>;
@@ -61,14 +66,17 @@ public:
   friend class ArgumentList;
 
 private:
-  constexpr ValueIter(size_t argc, JSValue *js_values, size_t count = 0)
-      : argc_(argc), js_values_(js_values), count_(count),
-        current_(js_values[count]) {}
+  ValueIter(size_t argc, JSValue *js_values, size_t count = 0)
+      : argc_(argc), js_values_(js_values), count_(count), current_() {
+    if (count_ < argc_) {
+      current_.emplace(js_values_[count_]);
+    }
+  }
 
   size_t argc_;
   JSValue *js_values_;
   size_t count_;
-  Value current_;
+  std::optional<Value> current_;
 };
 
 class ArgumentList {
@@ -87,30 +95,38 @@ private:
 class RcValue final {
 public:
   RcValue(ContextProvider &ctx, JSValue value);
+  RcValue(ContextProvider &ctx, Value value);
   ~RcValue();
   RcValue(const RcValue &) = delete;
   RcValue &operator=(const RcValue &) = delete;
+  RcValue(RcValue &&);
+  RcValue &operator=(RcValue &&) = default;
   bool IsException();
-  JSValue Get();
-  JSValue Take();
+  RcValue Get(const char *prop);
+  void Set(const char *prop, Value v);
+  Value Invoke(const std::string &method, const std::vector<Value> &args);
+  Value Call(const std::vector<Value> &args);
+  Value Take();
+  Value value();
+  JSValue cobj();
 
 private:
   ContextProvider &ctx_;
-  std::optional<JSValue> js_value_;
+  std::optional<Value> cobj_;
 };
 
 class RcString final {
 public:
-  RcString(ContextProvider &ctx, const char *raw_string);
+  RcString(ContextProvider &ctx, const char *cobj);
   ~RcString();
   RcString(const RcString &) = delete;
   RcString &operator=(const RcString &) = delete;
-  const char *Get();
+  const char *cobj();
   const char *Take();
 
 private:
   ContextProvider &ctx_;
-  std::optional<const char *> raw_string_;
+  std::optional<const char *> cobj_;
 };
 
 } // namespace quickjs

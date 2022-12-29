@@ -1,4 +1,4 @@
-src = files('rendering_context_2d.cpp')
+src = files('context.cpp', 'facade.cpp')
 
 canvas = library('canvas', src,
   include_directories : inc,

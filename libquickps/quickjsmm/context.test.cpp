@@ -45,13 +45,13 @@ TEST_F(QuickJsContextTest, GetSet) {
   EXPECT_EQ(s_raw, "Hello QuickJS");
 }
 
-TEST_F(QuickJsContextTest, AmmendMeLater) {
+TEST_F(QuickJsContextTest, GetterHappyPath) {
   const auto &ctx = Runtime::CreateContext();
   auto b_js = ctx->Get(true);
   EXPECT_FALSE(b_js.IsException());
 }
 
-TEST_F(QuickJsContextTest, AmmendMeLaterLater) {
+TEST_F(QuickJsContextTest, CtorDtor) {
   std::unique_ptr<Point, OpaqueDeleter<Point>> p_ptr =
       Runtime::GetInstance().Ctor<Point>(1.0, 2.0);
   std::unique_ptr<Edge, OpaqueDeleter<Edge>> e_ptr =
@@ -65,27 +65,62 @@ TEST_F(QuickJsContextTest, AmmendMeLaterLater) {
   EXPECT_EQ(p_id, Runtime::GetInstance().ClassId<Point>());
   EXPECT_EQ(e_id, Runtime::GetInstance().ClassId<Edge>());
 }
-/*
-// FIXME: This test causes GC to SIGSEGV.
-TEST_F(QuickJsContextTest, AmmendMeLaterLaterLaterSUSPECTINGHERE) {
+
+TEST_F(QuickJsContextTest, GetSetOpaque) {
   const auto &ctx = Runtime::GetInstance().CreateContext();
-  auto point_proto = Value(JS_NewObject(ctx->GetInstance()));
   std::unique_ptr<Point, OpaqueDeleter<Point>> p_ptr =
       Runtime::GetInstance().Ctor<Point>(1.0, 2.0);
-  Point *raw_ptr = p_ptr.get();
-  Value opaque = ctx->CreateOpaque<Point>(std::move(p_ptr), point_proto);
-  Point *opaque_ptr = ctx->GetOpaque<Point>(opaque);
-  EXPECT_EQ(raw_ptr, opaque_ptr);
 
-  /// This causes immediate SIGSEGV.
-  // JS_FreeValue(ctx->GetInstance(), opaque.value());
+  // Boilerplate
+  JSClassDef def;
+  def.class_name = "Point";
+  def.finalizer = [](auto, auto js_val) {
+    Value v(js_val);
+    Runtime::GetInstance().Finalize<Point>(v);
+  };
+  Runtime::GetInstance().Register<Point>(def);
 
-  /// These cause SIGSEGV in the next test suite.
-  // Runtime::Dtor<Point>(opaque_ptr);
-  // JS_FreeValue(ctx->GetInstance(), point_proto.value());
+  JSClassID class_id = Runtime::GetInstance().ClassId<Point>();
+  EXPECT_TRUE(JS_IsRegisteredClass(JS_GetRuntime(ctx->cobj()), class_id));
 
-  // If you omit all 3 lines above, it causes SIGSEGV in the next test suite.
+  // Assign the Class ID to an opaque object on construction.
+  auto opaque_obj = Value(JS_NewObjectClass(ctx->cobj(), class_id));
+
+  JS_SetOpaque(opaque_obj.cobj(), p_ptr.get());
+  Point *opaque_ptr = ctx->GetOpaque<Point>(opaque_obj);
+  EXPECT_EQ(p_ptr.release(), opaque_ptr); // Prevent double free of p_ptr
+
+  // Free resources
+  JS_FreeValue(ctx->cobj(), opaque_obj.cobj());
 }
-*/
+
+TEST_F(QuickJsContextTest, PointClassConstruction) {
+  const auto &ctx = Runtime::GetInstance().CreateContext();
+  const auto &spec = GetClass<Point>();
+  auto ctor = ctx->Register<Point>(spec);
+
+  EXPECT_TRUE(JS_IsConstructor(ctx->cobj(), ctor.cobj()));
+
+  JSValue argv[2];
+  argv[0] = ctx->Get(cos(60 * M_PI / 180)).cobj();
+  argv[1] = ctx->Get(sin(60 * M_PI / 180)).cobj();
+  auto instance =
+      Value(JS_CallConstructor(ctx->cobj(), ctor.cobj(), 2, &argv[0]));
+  EXPECT_FALSE(instance.IsException());
+
+  auto *ptr = ctx->GetOpaque<Point>(instance);
+  EXPECT_DOUBLE_EQ(ptr->x, cos(60 * M_PI / 180));
+  EXPECT_DOUBLE_EQ(ptr->y, sin(60 * M_PI / 180));
+  EXPECT_DOUBLE_EQ(ptr->norm(), 1);
+
+  auto norm_ident = JS_NewAtom(ctx->cobj(), "norm");
+  EXPECT_TRUE(JS_HasProperty(ctx->cobj(), instance.cobj(), norm_ident));
+  auto norm =
+      Value(JS_Invoke(ctx->cobj(), instance.cobj(), norm_ident, 0, nullptr));
+  EXPECT_EQ(norm.Get<double>(*ctx), 1);
+
+  // Free resources
+  JS_FreeValue(ctx->cobj(), instance.cobj());
+}
 
 } // namespace

@@ -1,23 +1,32 @@
 subdir('quickjsmm')
 subdir('canvas')
 
-src = files()
+src = files('quickps.cpp')
 
 quickps = library('quickps', src,
-  dependencies : [paperjs_dep, quickjsmm_dep])
+  dependencies : [canvas_dep, paperjs_dep, quickjsmm_dep])
+
+quickps_dep = declare_dependency(
+  include_directories : inc,
+  link_with : quickps,
+  dependencies : [canvas_dep, paperjs_dep, quickjsmm_dep])
 
 tests = files(
-  'canvas/rendering_context_2d.test.cpp',
+  'canvas/context.test.cpp',
+  'e2e.test.cpp',
+  'isinstanceof.test.cpp',
+  'paperjs.test.cpp',
   'quickjsmm/context.test.cpp',
   'quickjsmm/esm.test.cpp',
+  'quickjsmm/facade.cpp',
   'quickjsmm/fixture.cpp',
   'quickjsmm/value.test.cpp',
-  'paperjs.test.cpp',
+  'quickps.test.cpp',
 )
 
 unit_test = executable('unit_test', tests,
   include_directories : inc,
-  dependencies : [canvas_dep, gtest_dep, paperjs_dep, quickjsmm_dep])
+  dependencies : [gtest_dep, quickps_dep])
 
 test('unit test', unit_test,
   protocol : 'gtest',

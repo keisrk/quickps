@@ -2,6 +2,8 @@
 #define QUICKPS_QUICKJSMM_QUICKJS_H_
 
 #include <exception>
+#include <string>
+#include <vector>
 
 extern "C" {
 #if defined(__clang__)
@@ -32,8 +34,32 @@ class Exception : public std::exception {};
 
 class ContextProvider {
 public:
-  virtual JSContext *GetInstance() = 0;
+  virtual JSContext *cobj() = 0;
   virtual ~ContextProvider() = default;
+};
+
+class Entry final {
+public:
+  Entry(JSCFunctionListEntry entry) : cobj_(entry) {}
+  JSCFunctionListEntry &cobj() { return cobj_; }
+
+private:
+  JSCFunctionListEntry cobj_;
+};
+
+struct Class {
+  JSClassDef def;
+  JSCFunction *ctor;
+  size_t ctor_argc;
+  std::vector<JSCFunctionListEntry> prototype;
+};
+
+class EsModule final {
+public:
+  const char *name() { return name_.c_str(); }
+
+private:
+  std::string name_;
 };
 
 } // namespace quickjs

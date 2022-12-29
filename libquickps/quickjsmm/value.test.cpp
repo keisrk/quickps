@@ -17,13 +17,22 @@ protected:
     js_values_[4] = JS_NewString(ctx_, "Hello QuickJS");
   }
 
-  JSContext *GetInstance() { return ctx_; }
+  virtual void TearDown() override {
+    JS_FreeContext(ctx_);
+    JS_FreeRuntime(rt_);
+  }
+
+  JSContext *cobj() { return ctx_; }
 
   JSRuntime *rt_;
   JSContext *ctx_;
   JSValue js_values_[5];
   size_t kArgCount = 5;
 };
+
+TEST_F(QuickJsValueTest, ValueWrapsJSValue) {
+  EXPECT_EQ(sizeof(JSValue), sizeof(Value));
+}
 
 TEST_F(QuickJsValueTest, ArgumentListIsIteratable) {
   ArgumentList args(kArgCount, js_values_);
@@ -47,6 +56,17 @@ TEST_F(QuickJsValueTest, TypedGetters) {
   EXPECT_EQ(it++->Get<double>(ctx), 3.14);
   EXPECT_EQ(it++->Get<std::string>(ctx), "Hello QuickJS");
   EXPECT_EQ(it, args.end());
+}
+
+TEST_F(QuickJsValueTest, RcValueAndString) {
+  ContextProvider &ctx = *this;
+  std::string json(R"({ "width": 600, "height": 480, "type": "image" })");
+  auto canvas = RcValue(
+      ctx, JS_ParseJSON(ctx.cobj(), json.c_str(), json.size(), "anonymous"));
+  auto type =
+      RcValue(ctx, JS_GetPropertyStr(ctx.cobj(), canvas.cobj(), "type"));
+  auto cstr = RcString(ctx, JS_ToCString(ctx.cobj(), type.cobj()));
+  EXPECT_STREQ(cstr.cobj(), "image");
 }
 
 } // namespace

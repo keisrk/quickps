@@ -1,39 +1,82 @@
 #ifndef QUICKPS_QUICKPS_H_
 #define QUICKPS_QUICKPS_H_
 
+#include <libquickps/canvas/context.hpp>
+
 namespace quickps {
 
-class QuickPs {};
+// A plain old data struct that wraps canvas implementation.
+struct PaperCanvas {
+  PaperCanvas(quickjs::Value value);
+  quickjs::Value value;
+};
+
+struct PaperExecutable {
+  PaperExecutable(quickjs::Value code);
+  quickjs::Value code;
+};
+
+// Forward declarations.
+class PaperScope;
+class PaperScript;
+class PaperCanvasProvider;
+
+class QuickPs {
+public:
+  void Init();
+  void Terminate();
+  PaperScope CreatePaperScope();
+  quickjs::Context &ctx();
+  quickjs::Value canvas();
+  quickjs::Value c2d();
+  quickjs::Value create_canvas();
+
+private:
+  std::unique_ptr<quickjs::Context, quickjs::ContextDeleter> ctx_;
+  std::optional<quickjs::RcValue> canvas_;
+  std::optional<quickjs::RcValue> c2d_;
+  std::optional<quickjs::RcValue> create_canvas_;
+
+  void LoadContext();
+  void LoadPaper();
+  void LoadCanvasClass();
+  void LoadContext2dClass();
+  void FreeContext();
+  void FreePaper();
+  void FreeCanvasClass();
+  void FreeContext2dClass();
+};
 
 class PaperScope {
-  static PaperScope Create();
-  void Inject();
-  void SetUp();
+public:
+  PaperScope(QuickPs &qps);
+  PaperCanvasProvider Inject();
+  PaperScript SetUp(PaperCanvas &canvas);
+
+private:
+  QuickPs &qps_;
 };
 
 class PaperScript {
-  void Compile();
-  void Execute();
+public:
+  PaperScript(QuickPs &qps, quickjs::Value scope);
+  PaperExecutable Compile(const char *source);
+  void Execute(const PaperExecutable &exe);
+
+private:
+  QuickPs &qps_;
+  quickjs::RcValue scope_;
+};
+
+class PaperCanvasProvider {
+public:
+  PaperCanvasProvider(QuickPs &qps);
+  PaperCanvas CreateCanvas(int width, int height);
+
+private:
+  QuickPs &qps_;
 };
 
 } // namespace quickps
 
 #endif // QUICKPS_QUICKPS_H_
-
-/*
-int main(int argc, char **argv)
-{
-  JSRuntime *rt;
-  JSContext *ctx;
-  rt = JS_NewRuntime();
-  js_std_set_worker_new_context_func(JS_NewCustomContext);
-  js_std_init_handlers(rt);
-  ctx = JS_NewCustomContext(rt);
-  js_std_add_helpers(ctx, argc, argv);
-  js_std_eval_binary(ctx, qjsc_hello, qjsc_hello_size, 0);
-  js_std_loop(ctx);
-  JS_FreeContext(ctx);
-  JS_FreeRuntime(rt);
-  return 0;
-}
-*/

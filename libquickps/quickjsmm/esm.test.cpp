@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <libquickps/quickjsmm/context.hpp>
 #include <libquickps/quickjsmm/esm.hpp>
+#include <libquickps/quickjsmm/facade.hpp>
 #include <libquickps/quickjsmm/fixture.hpp>
 
 namespace {
@@ -16,8 +17,8 @@ protected:
 
 TEST_F(QuickJsEsmTest, AmendMeLater) {
   const auto &ctx = Runtime::CreateContext();
-  auto cls = ClassSpec<Point>("Point")
-                 .Constructor<facade::ctor>(2)
+  auto cls = ClassBuilder<Point>("Point")
+                 .Constructor<New<Point>>(2)
                  .Proto(EntryBuilder<Point>()
                             .Name("x")
                             .Getter<facade::get_x>()
@@ -31,9 +32,9 @@ TEST_F(QuickJsEsmTest, AmendMeLater) {
                  .Proto(EntryBuilder<Point>()
                             .Name("norm")
                             .Method<facade::norm>(0)
-                            .Build());
-  Value v = cls.Register(*ctx);
+                            .Build())
+                 .Build();
+  RcValue v = ctx->Register<Point>(cls);
   EXPECT_NE(&v, nullptr);
-  JS_FreeValue(ctx->GetInstance(), v.value());
 }
 } // namespace

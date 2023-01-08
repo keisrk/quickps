@@ -5,18 +5,18 @@
 #include <cairomm/surface.h>
 #include <exception>
 #include <filesystem>
+#include <libquickps/canvas/style.hpp>
 #include <libquickps/quickjsmm/esm.hpp>
 #include <memory>
 #include <optional>
 #include <string> // Prefer enum ...
 #include <type_traits>
+#include <variant>
 
 namespace quickps {
 namespace canvas {
 
 class Unimplemented : public std::exception {};
-class Gradient {};
-class Pattern {};
 
 class Context final {
 public:
@@ -29,10 +29,10 @@ public:
   void Translate(double x, double y);
   void Transform(double a, double b, double c, double d, double e, double f);
   void SetTransform(double a, double b, double c, double d, double e, double f);
-  Gradient CreateLinearGradient(double x0, double y0, double x1, double y1);
-  Gradient CreateRadialGradient(double x0, double y0, double r0, double x1,
-                                double y1, double r1);
-  Pattern CreatePattern(double image, int repetition);
+  Style CreateLinearGradient(double x0, double y0, double x1, double y1);
+  Style CreateRadialGradient(double x0, double y0, double r0, double x1,
+                             double y1, double r1);
+  Style CreatePattern(double image, int repetition);
   void ClearRect(double x, double y, double w, double h);
   void FillRect(double x, double y, double w, double h);
   void StrokeRect(double x, double y, double w, double h);
@@ -67,11 +67,15 @@ public:
   void PutImageData(double imagedata, double dx, double dy, double dirtyX,
                     double dirtyY, double dirtyWidth, double dirtyHeight);
   void SetLineDash(double array);
+  Style GetFillStyle();
+  void SetFillStyle(const Style &);
+  void SetFillStyle(const Color &);
+  Style GetStrokeStyle();
+  void SetStrokeStyle(const Style &);
+  void SetStrokeStyle(const Color &);
 
   double globalAlpha = 0.0;
   double globalCompositeOperation = 0.0;
-  std::array<int, 4> fill_style_ = {0, 0, 0, 0};
-  std::array<int, 4> stroke_style_ = {0, 0, 0, 0};
   double lineWidth = 1.0;
   std::string lineCap = "";
   std::string lineJoin = "";

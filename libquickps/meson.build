@@ -12,6 +12,8 @@ quickps_dep = declare_dependency(
   dependencies : [canvas_dep, paperjs_dep, quickjsmm_dep])
 
 tests = files(
+  'cairomm.test.cpp',
+  'canvas/color.test.cpp',
   'canvas/context.test.cpp',
   'e2e.test.cpp',
   'isinstanceof.test.cpp',

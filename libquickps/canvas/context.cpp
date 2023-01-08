@@ -37,24 +37,24 @@ void Context::SetTransform(double a, double b, double c, double d, double e,
   Impl()->set_matrix(m);
 }
 
-Gradient Context::CreateLinearGradient([[maybe_unused]] double x0,
-                                       [[maybe_unused]] double y0,
-                                       [[maybe_unused]] double x1,
-                                       [[maybe_unused]] double y1) {
+Style Context::CreateLinearGradient([[maybe_unused]] double x0,
+                                    [[maybe_unused]] double y0,
+                                    [[maybe_unused]] double x1,
+                                    [[maybe_unused]] double y1) {
   throw Unimplemented();
 }
 
-Gradient Context::CreateRadialGradient([[maybe_unused]] double x0,
-                                       [[maybe_unused]] double y0,
-                                       [[maybe_unused]] double r0,
-                                       [[maybe_unused]] double x1,
-                                       [[maybe_unused]] double y1,
-                                       [[maybe_unused]] double r1) {
+Style Context::CreateRadialGradient([[maybe_unused]] double x0,
+                                    [[maybe_unused]] double y0,
+                                    [[maybe_unused]] double r0,
+                                    [[maybe_unused]] double x1,
+                                    [[maybe_unused]] double y1,
+                                    [[maybe_unused]] double r1) {
   throw Unimplemented();
 }
 
-Pattern Context::CreatePattern([[maybe_unused]] double image,
-                               [[maybe_unused]] int repetition) {
+Style Context::CreatePattern([[maybe_unused]] double image,
+                             [[maybe_unused]] int repetition) {
   throw Unimplemented();
 }
 
@@ -241,6 +241,16 @@ template <> const Class &GetClass<canvas::Context>() {
   static Class kClass =
       ClassBuilder<canvas::Context>("CanvasRenderingContext2D")
           .Constructor<New<canvas::Context>>(1)
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("fillStyle")
+                     .Getter<GetFillStyle>()
+                     .Setter<SetFillStyle>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("strokeStyle")
+                     .Getter<GetStrokeStyle>()
+                     .Setter<SetStrokeStyle>()
+                     .Build())
           .Proto(EntryBuilder<canvas::Context>()
                      .Name("save")
                      .Method<Save>(0)

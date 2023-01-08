@@ -7,6 +7,44 @@ namespace facade {
 
 namespace qjs = quickps::quickjs;
 
+qjs::Value GetFillStyle([[maybe_unused]] qjs::Context &ctx,
+                        [[maybe_unused]] Context *c2d) {
+  return qjs::Value::GetUndefined();
+}
+
+void SetFillStyle(qjs::Context &ctx, [[maybe_unused]] Context *c2d,
+                  qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    [[maybe_unused]] auto color = value.Get<std::string>(ctx);
+    JS_DupValue(ctx.cobj(), value.cobj());
+  } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
+    [[maybe_unused]] auto pattern =
+        value.Get<std::unordered_map<std::string, qjs::Value>>(ctx);
+    JS_DupValue(ctx.cobj(), value.cobj());
+  } else {
+    JS_DupValue(ctx.cobj(), value.cobj());
+  }
+}
+
+qjs::Value GetStrokeStyle([[maybe_unused]] qjs::Context &ctx,
+                          [[maybe_unused]] Context *c2d) {
+  return qjs::Value::GetUndefined();
+}
+
+void SetStrokeStyle(qjs::Context &ctx, [[maybe_unused]] Context *c2d,
+                    qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    [[maybe_unused]] auto color = value.Get<std::string>(ctx);
+    JS_DupValue(ctx.cobj(), value.cobj());
+  } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
+    [[maybe_unused]] auto pattern =
+        value.Get<std::unordered_map<std::string, qjs::Value>>(ctx);
+    JS_DupValue(ctx.cobj(), value.cobj());
+  } else {
+    JS_DupValue(ctx.cobj(), value.cobj());
+  }
+}
+
 qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
   std::cout << "save\n";

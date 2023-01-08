@@ -9,6 +9,10 @@ namespace facade {
 
 namespace qjs = quickps::quickjs;
 // Context
+qjs::Value GetFillStyle(qjs::Context &ctx, Context *c2d);
+void SetFillStyle(qjs::Context &, Context *c2d, qjs::Value value);
+qjs::Value GetStrokeStyle(qjs::Context &ctx, Context *c2d);
+void SetStrokeStyle(qjs::Context &, Context *c2d, qjs::Value value);
 qjs::Value Save(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last);
 qjs::Value Restore(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,

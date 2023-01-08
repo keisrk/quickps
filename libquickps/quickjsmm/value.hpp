@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 
 namespace quickps {
 namespace quickjs {
@@ -22,6 +23,24 @@ public:
   bool IsException();
 
   bool IsUndefined();
+
+  template <typename T> bool InstanceOf() {
+    if constexpr (std::is_same<T, std::nullptr_t>::value) {
+      return JS_IsNull(cobj_);
+    } else if constexpr (std::is_same<T, bool>::value) {
+      return JS_IsBool(cobj_);
+    } else if constexpr (std::is_same<T, int>::value ||
+                         std::is_same<T, double>::value) {
+      return JS_IsNumber(cobj_);
+    } else if constexpr (std::is_same<T, std::string>::value) {
+      return JS_IsString(cobj_);
+    } else if constexpr (std::is_same<T, std::unordered_map<std::string,
+                                                            Value>>::value) {
+      return JS_IsObject(cobj_);
+    } else {
+      throw Exception();
+    }
+  }
 
   JSValue &cobj();
 
@@ -41,6 +60,10 @@ public:
       std::string result(c_str);
       JS_FreeCString(ctx.cobj(), c_str);
       return result;
+    } else if constexpr (std::is_same<T, std::unordered_map<std::string,
+                                                            Value>>::value) {
+      std::unordered_map<std::string, Value> map{};
+      return map;
     } else {
       static_assert(!std::is_same<T, void>::value,
                     "Value type void is invalid.");

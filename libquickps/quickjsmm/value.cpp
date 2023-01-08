@@ -75,7 +75,6 @@ bool ValueIter::operator==(const ValueIter &other) const {
 
 bool ValueIter::operator!=(const ValueIter &other) const {
   return !(js_values_ == other.js_values_ && count_ == other.count_);
-  //  return !(*this == other);
 }
 
 ValueIter ArgumentList::begin() { return ValueIter(argc_, js_values_); }

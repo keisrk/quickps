@@ -53,7 +53,9 @@ public:
       return tmp;
     } else if constexpr (std::is_same<T, double>::value) {
       double tmp;
-      JS_ToFloat64(ctx.cobj(), &tmp, cobj_);
+      if (0 != JS_ToFloat64(ctx.cobj(), &tmp, cobj_)) {
+        throw Exception();
+      }
       return tmp;
     } else if constexpr (std::is_same<T, std::string>::value) {
       auto c_str = JS_ToCString(ctx.cobj(), cobj_);

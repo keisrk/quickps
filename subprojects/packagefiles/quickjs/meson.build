@@ -10,7 +10,6 @@ src = files(
   'libunicode.c',
   'libregexp.c',
   'quickjs.c',
-  'quickjs-libc.c',
 )
 extra_args = [
   '-D_GNU_SOURCE',

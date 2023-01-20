@@ -123,6 +123,10 @@ PaperExecutable PaperScript::Compile(const char *source) {
   return PaperExecutable(compiled.Get("code").Take());
 }
 
+PaperExecutable PaperScript::Compile(const std::string &source) {
+  return PaperScript::Compile(source.c_str());
+}
+
 void PaperScript::Execute(const PaperExecutable &exe) {
   auto engine = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScript");
   {

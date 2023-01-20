@@ -1,3 +1,3 @@
-exe = executable('qpsc', 'qpsc.cpp',
-  dependencies : [boost_dep, quickps_dep],
+qpsc_exe = executable('qpsc', 'qpsc.cpp',
+  dependencies : [quickps_dep],
   install : false)

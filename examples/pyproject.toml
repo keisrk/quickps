@@ -1,0 +1,16 @@
+[project]
+name = "examples"
+version = "0.1.0"
+dependencies = [
+    "pytest == 7.2.1",
+    "pytest-html == 3.2.0",
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]

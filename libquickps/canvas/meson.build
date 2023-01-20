@@ -1,4 +1,10 @@
-src = files('color.cpp', 'context.cpp', 'facade.cpp', 'style.cpp')
+src = files(
+  'color.cpp',
+  'context.cpp',
+  'facade.cpp',
+  'state.cpp',
+  'style.cpp'
+)
 
 canvas = library('canvas', src,
   include_directories : inc,

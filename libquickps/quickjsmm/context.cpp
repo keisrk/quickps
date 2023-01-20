@@ -8,6 +8,7 @@ JSContext *Context::cobj() { return cobj_; }
 Value Context::Get(bool val) { return WrapValue(JS_NewBool(cobj_, val)); }
 Value Context::Get(int val) { return WrapValue(JS_NewInt32(cobj_, val)); }
 Value Context::Get(double val) { return WrapValue(JS_NewFloat64(cobj_, val)); }
+Value Context::Get(const std::string &val) { return Context::Get(val.c_str()); }
 Value Context::Get(const char *val) {
   return WrapValue(JS_NewString(cobj_, val));
 }
@@ -86,6 +87,7 @@ std::unordered_map<std::size_t, JSClassID> Runtime::class_registry_ = {};
 void Runtime::Init() {
   Runtime::cobj_ = JS_NewRuntime();
   Runtime::class_registry_.clear();
+  JS_SetMaxStackSize(Runtime::cobj_.value(), 2 * JS_DEFAULT_STACK_SIZE);
 }
 
 void Runtime::Terminate() {

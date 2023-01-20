@@ -15,6 +15,7 @@ tests = files(
   'cairomm.test.cpp',
   'canvas/color.test.cpp',
   'canvas/context.test.cpp',
+  'canvas/state.test.cpp',
   'e2e.test.cpp',
   'isinstanceof.test.cpp',
   'paperjs.test.cpp',

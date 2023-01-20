@@ -97,6 +97,7 @@ public:
   Value Get(int val);
   Value Get(double val);
   Value Get(const char *val);
+  Value Get(const std::string &val);
   RcValue GetGlobalThis();
   RcValue GetObject(const std::unordered_map<std::string, Value> &val);
   void Set(bool &ref, Value val);

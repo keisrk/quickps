@@ -12,10 +12,11 @@ qjs::Value GetFillStyle([[maybe_unused]] qjs::Context &ctx,
   return qjs::Value::GetUndefined();
 }
 
-void SetFillStyle(qjs::Context &ctx, [[maybe_unused]] Context *c2d,
-                  qjs::Value value) {
+void SetFillStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
-    [[maybe_unused]] auto color = value.Get<std::string>(ctx);
+    auto css_color = value.Get<std::string>(ctx);
+    auto color = Color::FromString(css_color);
+    c2d->Impl()->set_source_rgba(color.r, color.g, color.b, color.a);
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     [[maybe_unused]] auto pattern =
@@ -47,7 +48,7 @@ void SetStrokeStyle(qjs::Context &ctx, [[maybe_unused]] Context *c2d,
 
 qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cout << "save\n";
+  std::cerr << "save\n";
 
   if (first != last)
     throw qjs::Exception();
@@ -58,7 +59,7 @@ qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Restore(qjs::Context &, Context *c2d, qjs::ValueIter first,
                    qjs::ValueIter last) {
-  std::cout << "restore\n";
+  std::cerr << "restore\n";
 
   if (first != last)
     throw qjs::Exception();
@@ -157,7 +158,7 @@ qjs::Value CreatePattern([[maybe_unused]] qjs::Context &ctx,
 
 qjs::Value ClearRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
-  std::cout << "clearRect\n";
+  std::cerr << "clearRect\n";
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -173,7 +174,7 @@ qjs::Value ClearRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value FillRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                     qjs::ValueIter last) {
-  std::cout << "fillRect\n";
+  std::cerr << "fillRect\n";
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -189,7 +190,7 @@ qjs::Value FillRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value StrokeRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                       qjs::ValueIter last) {
-  std::cout << "strokeRect\n";
+  std::cerr << "strokeRect\n";
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -205,7 +206,7 @@ qjs::Value StrokeRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value BeginPath(qjs::Context &, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
-  std::cout << "beginPath\n";
+  std::cerr << "beginPath\n";
 
   if (first != last)
     throw qjs::Exception();
@@ -216,7 +217,7 @@ qjs::Value BeginPath(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value ClosePath(qjs::Context &, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
-  std::cout << "closePath\n";
+  std::cerr << "closePath\n";
 
   if (first != last)
     throw qjs::Exception();
@@ -227,7 +228,7 @@ qjs::Value ClosePath(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value MoveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
-  std::cout << "moveTo\n";
+  std::cerr << "moveTo\n";
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -241,7 +242,7 @@ qjs::Value MoveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value LineTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
-  std::cout << "lineTo\n";
+  std::cerr << "lineTo\n";
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -269,7 +270,7 @@ qjs::Value QuadraticCurveTo(qjs::Context &ctx, Context *c2d,
 
 qjs::Value BezierCurveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                          qjs::ValueIter last) {
-  std::cout << "bezierCurveTo\n";
+  std::cerr << "bezierCurveTo\n";
 
   auto cp1x = first++->Get<double>(ctx);
   auto cp1y = first++->Get<double>(ctx);
@@ -289,13 +290,13 @@ qjs::Value ArcTo([[maybe_unused]] qjs::Context &ctx,
                  [[maybe_unused]] Context *c2d,
                  [[maybe_unused]] qjs::ValueIter first,
                  [[maybe_unused]] qjs::ValueIter last) {
-  std::cout << "arcTo\n";
+  std::cerr << "arcTo\n";
   throw qjs::Exception();
 }
 
 qjs::Value Rect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cout << "rect\n";
+  std::cerr << "rect\n";
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -313,13 +314,13 @@ qjs::Value Arc([[maybe_unused]] qjs::Context &ctx,
                [[maybe_unused]] Context *c2d,
                [[maybe_unused]] qjs::ValueIter first,
                [[maybe_unused]] qjs::ValueIter last) {
-  std::cout << "arc\n";
+  std::cerr << "arc\n";
   throw qjs::Exception();
 }
 
 qjs::Value Fill(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cout << "fill\n";
+  std::cerr << "fill\n";
 
   std::optional<std::string> fill_rule;
 
@@ -340,7 +341,7 @@ qjs::Value Fill(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Stroke(qjs::Context &, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
-  std::cout << "stroke\n";
+  std::cerr << "stroke\n";
 
   if (first != last)
     throw qjs::Exception();
@@ -351,7 +352,7 @@ qjs::Value Stroke(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Clip(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cout << "clip\n";
+  std::cerr << "clip\n";
 
   std::optional<std::string> fill_rule;
 
@@ -372,7 +373,7 @@ qjs::Value Clip(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value IsPointInPath(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                          qjs::ValueIter last) {
-  std::cout << "isPointInPath\n";
+  std::cerr << "isPointInPath\n";
 
   std::optional<std::string> fill_rule;
 
@@ -446,7 +447,7 @@ qjs::Value SetLineDash([[maybe_unused]] qjs::Context &ctx,
 qjs::Value CreateCanvas(qjs::Context &ctx,
                         [[maybe_unused]] qjs::Value this_value,
                         qjs::ValueIter first, qjs::ValueIter last) {
-  std::cout << "createCavnas\n";
+  std::cerr << "createCavnas\n";
   auto ptr = quickjs::New<Canvas>(ctx, first, last);
   auto canvas = qjs::RcValue(
       ctx, ctx.CreateOpaque<Canvas>(std::move(ptr), qjs::Value::GetNull()));
@@ -457,7 +458,7 @@ qjs::Value CreateCanvas(qjs::Context &ctx,
 qjs::Value GetContext(qjs::Context &ctx, Canvas *canvas,
                       [[maybe_unused]] qjs::ValueIter first,
                       [[maybe_unused]] qjs::ValueIter last) {
-  std::cout << "getContext\n";
+  std::cerr << "getContext\n";
 
   auto ptr = qjs::Runtime::GetInstance().Ctor<Context>(canvas->CreateContext());
   return ctx.CreateOpaque<Context>(std::move(ptr), qjs::Value::GetNull())

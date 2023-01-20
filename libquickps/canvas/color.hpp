@@ -6,14 +6,15 @@
 namespace quickps {
 namespace canvas {
 
-struct Color {
-  double r, g, b, a;
+struct Color final {
+  float r, g, b, a;
   static Color Create(uint32_t rgba);
   static Color FromString(const std::string &str);
+  Color(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {}
 
 private:
-  static Color FromHsla(int, int, int, double);
-  static Color FromStringName(const std::string &str);
+  static Color FromHsla(int, int, int, float);
+  static Color FromName(const std::string &str);
 };
 
 bool operator==(const Color &, const Color &);

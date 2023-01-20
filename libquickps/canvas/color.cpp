@@ -1,8 +1,11 @@
+#include <cmath>
 #include <cstdint>
 #include <libquickps/canvas/color.hpp>
 #include <regex>
 #include <string>
 #include <unordered_map>
+
+#define EPSILON 0.00197f
 
 namespace quickps {
 namespace canvas {
@@ -12,68 +15,38 @@ static const std::regex
     kRgba(R"(rgba\((\d+),\s*(\d+),\s*(\d+),\s*((\d*\.)?\d+)\))");
 static const std::regex kRgb(R"(rgb\((\d+),\s*(\d+),\s*(\d+)\))");
 static const std::regex
-    kHsla(R"(hsla\((\d+),\s*(\d+)%,\s*(\d+)%,\s*((\d*\.)?\d+)\))");
-static const std::regex kHsl(R"(hsl\((\d+),\s*(\d+)%,\s*(\d+)%\))");
-
-static double hue_to_rgb(float t1, float t2, float hue) {
-  if (hue < 0)
-    hue += 6;
-  if (hue >= 6)
-    hue -= 6;
-
-  if (hue < 1)
-    return (t2 - t1) * hue + t1;
-  else if (hue < 3)
-    return t2;
-  else if (hue < 4)
-    return (t2 - t1) * (4 - hue) + t1;
-  else
-    return t1;
-}
-
-/*
- * Return rgba from (h,s,l,a).
- * Expects h values in the range [0, 360), and s, l, a in the range [0, 1].
- * Adapted from http://dev.w3.org/csswg/css-color-4/#hsl-to-rgb
- */
-
-static inline Color rgba_from_hsla(float h_deg, float s, float l, double a) {
-  float h = (6 * h_deg) / 360.0f, m1, m2;
-
-  if (l <= 0.5)
-    m2 = l * (s + 1);
-  else
-    m2 = l + s - l * s;
-  m1 = l * 2 - m2;
-
-  // Scale and round the RGB components
-  Color color;
-  color.r = hue_to_rgb(m1, m2, h + 2) * 255 + 0.5;
-  color.g = hue_to_rgb(m1, m2, h) * 255 + 0.5;
-  color.b = hue_to_rgb(m1, m2, h - 2) * 255 + 0.5;
-  color.a = a;
-  return color;
-}
+    kHsla(R"(hsla\((-?\d+),\s*(\d+)%,\s*(\d+)%,\s*((\d*\.)?\d+)\))");
+static const std::regex kHsl(R"(hsl\((-?\d+),\s*(\d+)%,\s*(\d+)%\))");
 
 bool operator==(const Color &lhs, const Color &rhs) {
-  return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
+  return std::fabs(lhs.r - rhs.r) < EPSILON &&
+         std::fabs(lhs.g - rhs.g) < EPSILON &&
+         std::fabs(lhs.b - rhs.b) < EPSILON &&
+         std::fabs(lhs.a - rhs.a) < EPSILON;
 }
 
 bool operator!=(const Color &lhs, const Color &rhs) { return !(lhs == rhs); }
 
 Color Color::Create(uint32_t rgba) {
-  Color color;
-  color.r = (double)(rgba >> 24) / 255;
-  color.g = (double)(rgba >> 16 & 0xff) / 255;
-  color.b = (double)(rgba >> 8 & 0xff) / 255;
-  color.a = (double)(rgba & 0xff) / 255;
-  return color;
+  float r = static_cast<float>(rgba >> 24) / 255;
+  float g = static_cast<float>((rgba >> 16) & 0xff) / 255;
+  float b = static_cast<float>((rgba >> 8) & 0xff) / 255;
+  float a = static_cast<float>(rgba & 0xff) / 255;
+  return Color(r, g, b, a);
 }
 
-Color Color::FromHsla(int hue, int saturation, int lightness, double alpha) {
-  float s = saturation / 100.0;
-  float l = lightness / 100.0;
-  return rgba_from_hsla(hue, s, l, alpha);
+// https://drafts.csswg.org/css-color-4/#hsl-to-rgb
+Color Color::FromHsla(int hue, int saturation, int lightness, float alpha) {
+  const int h = hue < 0 ? (hue % 360) + 360 : hue % 360;
+  const float s = saturation / 100.0;
+  const float l = lightness / 100.0;
+  const auto f = [=](int n) {
+    const int k = (n + h / 30) % 12;
+    const float a = s * std::min(l, 1 - l);
+    return l - a * std::max(-1, std::min({k - 3, 9 - k, 1}));
+  };
+
+  return Color(f(0), f(8), f(4), alpha);
 }
 
 Color Color::FromString(const std::string &str) {
@@ -88,36 +61,33 @@ Color Color::FromString(const std::string &str) {
       return Color::Create(hex << 8 | 0xff);
     }
   } else if (std::regex_match(str, match_result, kRgba)) {
-    Color color;
-    color.r = std::stod(match_result[1]);
-    color.g = std::stod(match_result[2]);
-    color.b = std::stod(match_result[3]);
-    color.a = std::stod(match_result[4]);
-    return color;
+    auto r = std::stof(match_result[1]) / 255;
+    auto g = std::stof(match_result[2]) / 255;
+    auto b = std::stof(match_result[3]) / 255;
+    auto a = std::stof(match_result[4]) / 255;
+    return Color(r, g, b, a);
   } else if (std::regex_match(str, match_result, kRgb)) {
-    Color color;
-    color.r = std::stod(match_result[1]);
-    color.g = std::stod(match_result[2]);
-    color.b = std::stod(match_result[3]);
-    color.a = 0xff;
-    return color;
+    auto r = std::stof(match_result[1]) / 255;
+    auto g = std::stof(match_result[2]) / 255;
+    auto b = std::stof(match_result[3]) / 255;
+    return Color(r, g, b, 1.);
   } else if (std::regex_match(str, match_result, kHsla)) {
     auto hue = std::stoi(match_result[1]);
     auto saturation = std::stoi(match_result[2]);
     auto lightness = std::stoi(match_result[3]);
-    auto alpha = std::stod(match_result[4]);
+    auto alpha = std::stof(match_result[4]) / 255;
     return Color::FromHsla(hue, saturation, lightness, alpha);
   } else if (std::regex_match(str, match_result, kHsl)) {
     auto hue = std::stoi(match_result[1]);
     auto saturation = std::stoi(match_result[2]);
     auto lightness = std::stoi(match_result[3]);
-    return Color::FromHsla(hue, saturation, lightness, 0.0);
+    return Color::FromHsla(hue, saturation, lightness, 1.0);
   } else {
-    return Color::FromStringName(str);
+    return Color::FromName(str);
   }
 }
 
-Color Color::FromStringName(const std::string &str) {
+Color Color::FromName(const std::string &str) {
   static const std::unordered_map<std::string, uint32_t> kNamedColors = {
       {"transparent", 0xFFFFFF00},
       {"aliceblue", 0xF0F8FFFF},

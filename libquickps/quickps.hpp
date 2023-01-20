@@ -6,12 +6,12 @@
 namespace quickps {
 
 // A plain old data struct that wraps canvas implementation.
-struct PaperCanvas {
+struct PaperCanvas final {
   PaperCanvas(quickjs::Value value);
   quickjs::Value value;
 };
 
-struct PaperExecutable {
+struct PaperExecutable final {
   PaperExecutable(quickjs::Value code);
   quickjs::Value code;
 };
@@ -61,6 +61,7 @@ class PaperScript {
 public:
   PaperScript(QuickPs &qps, quickjs::Value scope);
   PaperExecutable Compile(const char *source);
+  PaperExecutable Compile(const std::string &source);
   void Execute(const PaperExecutable &exe);
 
 private:

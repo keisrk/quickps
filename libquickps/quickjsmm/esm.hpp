@@ -176,11 +176,3 @@ private:
 } // namespace quickps
 
 #endif // QUICKPS_QUICKJSMM_ESM_H_
-/*
-typedef struct JSCFunctionListEntry {
-    const char *name;
-    uint8_t prop_flags;
-    uint8_t def_type;
-    int16_t magic;
-    func | generic | ... u;
-*/

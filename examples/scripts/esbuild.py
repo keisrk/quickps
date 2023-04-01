@@ -2,15 +2,20 @@
 
 import argparse
 import json
-import platform
 import shutil
+import sys
 import tarfile
 from pathlib import Path
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from subprocess import run
 from tempfile import NamedTemporaryFile, gettempdir
 from urllib.request import urlopen
+
+VERSION = "@FALLBACK_VERSION@"
+OS = "@SYSTEM@"
+ARCH = "64" if "@CPU_FAMILY@" == "x86_64" else "@CPU_FAMILY@"
+URL = f"https://registry.npmjs.org/esbuild-{OS}-{ARCH}/-/esbuild-{OS}-{ARCH}-{VERSION}.tgz"
 
 
 @dataclass
@@ -36,36 +41,11 @@ class DepFile:
 
 
 class EsBuild:
-    FALLBACK_VERSION = "0.15.18"
     FALLBACK_PATH = Path(gettempdir()) / "package" / "bin" / "esbuild"
 
     @staticmethod
-    def download(version: str):
-        platform_data = platform.platform()
-        if "Linux" in platform_data:
-            os = "linux"
-        elif "Darwin" in platform_data:
-            os = "darwin"
-        elif "Windows" in platform_data:
-            os = "windows"
-        else:
-            raise Exception(f"Unsupported platform: {platform_data}")
-
-        if "x86_64" in platform_data:
-            arch = "64"
-        elif "arm64" in platform_data:
-            arch = "arm64"
-        elif "arm" in platform_data:
-            arch = "arm"
-        else:
-            if os == "windows":
-                arch = "64"
-            else:
-                raise Exception(f"Unsupported platform: {platform_data}")
-
-        url = f"https://registry.npmjs.org/esbuild-{os}-{arch}/-/esbuild-{os}-{arch}-{version}.tgz"
-
-        with urlopen(url) as response, NamedTemporaryFile(delete=False) as tmp:
+    def download():
+        with urlopen(URL) as response, NamedTemporaryFile(delete=False) as tmp:
             shutil.copyfileobj(response, tmp)
 
         with tarfile.open(tmp.name) as tar:
@@ -78,16 +58,26 @@ class EsBuild:
             return cls(esbuild)
         elif cls.FALLBACK_PATH.exists():
             return cls(cls.FALLBACK_PATH)
-
-        cls.download(cls.FALLBACK_VERSION)
-        return cls(cls.FALLBACK_PATH)
+        else:
+            cls.download()
+            return cls(cls.FALLBACK_PATH)
 
     def __init__(self, esbuild: Path):
         self.esbuild = esbuild
 
-    def run(self, metafile: Path, depfile: Path, args: List[str]):
+    def version(self):
+        run([self.esbuild, "--version"]).check_returncode()
+
+    def run(
+        self,
+        metafile: Path,
+        depfile: Path,
+        args: List[str],
+        nodepath: Optional[Path] = None,
+    ):
         _args = [self.esbuild, *args, f"--metafile={metafile}"]
-        run(_args).check_returncode()
+        _env = None if nodepath is None else {"NODE_PATH": nodepath}
+        run(_args, env=_env).check_returncode()
 
         with metafile.open() as input, depfile.open("w") as output:
             meta = json.load(input)
@@ -100,16 +90,25 @@ def main():
         prog="esbuild.py",
         description="Bundle JS files.",
     )
-    parser.add_argument("--depfile", type=Path, required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--version", action="store_true")
+    group.add_argument("--depfile", type=Path)
     parser.add_argument("--metafile", type=Path)
+    parser.add_argument("--nodepath", type=Path)
     (args, esbuild_args) = parser.parse_known_args()
+
+    if args.version:
+        EsBuild.find().version()
+        sys.exit(0)
+
     depfile = args.depfile
     metafile = (
         depfile.parent / (depfile.stem + ".meta.json")
         if args.metafile is None
         else args.metafile
     )
-    EsBuild.find().run(metafile, depfile, esbuild_args)
+
+    EsBuild.find().run(metafile, depfile, esbuild_args, nodepath=args.nodepath)
 
 
 if __name__ == "__main__":

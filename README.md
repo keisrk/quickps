@@ -6,7 +6,7 @@
 
 The swiss army knife of vector graphics scripting that fits in your pocket.
 
-quickps is a combination of the power of Paper.js and small footprint of QuickJS.
+quickps combines the power of Paper.js and small footprint of QuickJS.
 
 ## Installation
 

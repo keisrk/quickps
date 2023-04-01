@@ -4,6 +4,7 @@ project('quickps', 'cpp',
     'warning_level=3',
     'cpp_std=c++17',
     'python.install_env=venv',
+    'default_library=static',
   ]
 )
 
@@ -11,7 +12,7 @@ add_project_link_arguments(['-lstdc++fs'], language : 'cpp')
 subproject('quickjs')
 subproject('paperjs')
 
-cairo_dep = dependency('cairomm-1.0')
+cairo_dep = dependency('cairomm-1.0', static : false)
 gtest_dep = dependency('gtest', main : true)
 paperjs_dep = dependency('paperjs')
 quickjs_dep = dependency('quickjs')

@@ -12,12 +12,20 @@ cdn = generator(curl,
   output : '@BASENAME@.js',
   arguments : ['--config', '@INPUT@', '--output', '@OUTPUT@'],
 )
-twgl = cdn.process(
-  'src/twgl.config',
+twgl = cdn.process('src/twgl.config')
+
+esbuild_version = '0.15.18'
+esbuild_py = configure_file(
+  input: files('scripts/esbuild.py'),
+  output: 'esbuild.py',
+  configuration: {
+    'SYSTEM': build_machine.system(),
+    'CPU_FAMILY': build_machine.cpu_family(),
+    'FALLBACK_VERSION': esbuild_version,
+  }
 )
 
-esbuild_py = files('scripts/esbuild.py')
-esbuild = find_program(esbuild_py)
+esbuild = find_program(esbuild_py, version: esbuild_version)
 
 sources = files(
   'src/crane.js',
@@ -32,11 +40,11 @@ foreach src : sources
     input: [src, twgl],
     output: fs.name(src),
     command: [esbuild, '@INPUT0@', '--outfile=@OUTPUT@',
-      '--alias:twgl.js=./@INPUT1@',
       '--depfile=@DEPFILE@',
+      '--nodepath=@PRIVATE_DIR@',
       '--bundle', '--format=esm'
     ],
-    depfile: fs.stem(src) + '.d',
+    depfile: fs.stem(src) + '.d'
   )
 endforeach
 

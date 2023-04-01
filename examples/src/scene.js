@@ -11,6 +11,16 @@ export const project = ([x, y, z]) => {
   return new Point(newX, newY)
 }
 
+const fromPoint = (v) => {
+  if (v instanceof Float32Array) {
+    return v
+  } else {
+    return v3.create(v[0], v[1], v.length === 3 ? v[2] : 0)
+  }
+}
+
+const fromArray = (arr) => arr.map(fromPoint)
+
 const edges = (model) => {
   const edges = []
 
@@ -80,13 +90,12 @@ export class Scene {
   /**
    * Attaches a data attribute to the underlying Path instance.
    *
-   * @param {Array} model - an array of v3.Vec3 or 3-tuples.
+   * @param {Array} model - an array of v3.Vec3 or tuples.
    * @param {m4.Matrix} transform - An optional transform matrix.
    * @return {Scene} this instance for further method chaining.
    */
   cylinder (model, transform = m4.identity()) {
-    const modelV3 = model.map(v => v instanceof Float32Array ? v : v3.create(v[0], v[1], v[2]))
-    this.data = { model: modelV3, transform }
+    this.data = { model: fromArray(model), transform }
     return this
   }
 

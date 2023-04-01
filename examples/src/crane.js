@@ -14,10 +14,10 @@ tasks.push(class {
     const path = ctx.addChild(new Path({ name: this.name, fillColor: 'hsl(120,80%,25%)' }))
     this.scene = new Scene(path)
       .cylinder([
-        [1, 0, 0],
-        [0, 1, 0],
-        [-1, 0, 0],
-        [0, -1, 0]
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1]
       ])
   }
 
@@ -34,9 +34,9 @@ tasks.push(class {
     const path = ctx.addChild(new Path({ name: this.name }))
     this.scene = new Scene(path)
       .cylinder([
-        [1, 0, 0],
-        [0, 1, 0],
-        [-1, 0, 0]
+        [1, 0],
+        [0, 1],
+        [-1, 0]
       ])
 
     history.get('_ix').scene
@@ -61,28 +61,26 @@ tasks.push(class {
   constructor (ctx, history) {
     this.name = '_nl'
     this.scenes = new Map()
-
-    this.scenes.set('_gy', new Scene(ctx.addChild(new Path({ name: '_gy', fillColor: 'hsl(240,100%,50%)' })))
-      .cylinder([
-        [1, 0, 0],
-        [0, -1, 0],
-        [0, 0, 0]
-      ],
-      history.get('_ix').scene.data.transform
-      ))
+      .set('_gy', new Scene(ctx.addChild(new Path({ name: '_gy', fillColor: 'hsl(240,100%,50%)' })))
+        .cylinder([
+          [1, 0],
+          [0, -1],
+          [0, 0]
+        ],
+        history.get('_ix').scene.data.transform
+        ))
+      .set('_rs', new Scene(ctx.addChild(new Path({ name: '_rs', fillColor: 'hsl(240,100%,25%)' })))
+        .cylinder([
+          [1, 0],
+          [0, 1],
+          [0, 0]
+        ],
+        history.get('_u6').scene.data.transform
+        ))
 
     history.get('_ix').scene
       .separate(this.scenes.get('_gy').data.model)
       .project()
-
-    this.scenes.set('_rs', new Scene(ctx.addChild(new Path({ name: '_rs', fillColor: 'hsl(240,100%,25%)' })))
-      .cylinder([
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 0]
-      ],
-      history.get('_u6').scene.data.transform
-      ))
 
     history.get('_u6').scene
       .separate(this.scenes.get('_rs').data.model)

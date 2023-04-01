@@ -1,11 +1,11 @@
-project('paperjs', 'cpp')
+project('paperjs', 'cpp',  version : '0.12.17')
 
 curl = find_program('curl')
 py_mod = import('python')
 py = py_mod.find_installation()
 prepro = files('scripts/prepro.py')
 
-quickjs = subproject('quickjs').get_variable('quickjs')
+quickjs = subproject('quickjs').get_variable('quickjs').get_shared_lib()
 
 cdn = generator(curl,
   output : '@BASENAME@.js',
@@ -66,5 +66,3 @@ paperjs = library('paperjs',
 paperjs_dep = declare_dependency(
   sources : paperjs_c[1],
   link_with : paperjs)
-
-meson.override_dependency('paperjs', paperjs_dep)

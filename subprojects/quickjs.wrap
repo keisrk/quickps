@@ -4,4 +4,4 @@ revision = master
 patch_directory = quickjs
 
 [provide]
-dependency_names = quickjs
+quickjs = quickjs_dep

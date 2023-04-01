@@ -1,4 +1,4 @@
-project('quickjs', 'c')
+project('quickjs', 'c',  version : '2021-03-27')
 inc = include_directories('.')
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m')
@@ -14,17 +14,14 @@ src = files(
 extra_args = [
   '-D_GNU_SOURCE',
   '-DCONFIG_BIGNUM',
-  '-DCONFIG_VERSION="2021-03-27"',
+  '-DCONFIG_VERSION="@0@"'.format(meson.project_version()),
   '-w',
 ]
 
-quickjs = shared_library('quickjs', src,
+quickjs = both_libraries('quickjs', src,
   c_args : extra_args,
-  include_directories : inc,
   dependencies: [m_dep, dl_dep, thread_dep])
 
 quickjs_dep = declare_dependency(
   include_directories : inc,
-  link_with : quickjs)
-
-meson.override_dependency('quickjs', quickjs_dep)
+  link_with : quickjs.get_static_lib())

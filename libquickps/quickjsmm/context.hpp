@@ -2,6 +2,7 @@
 #define QUICKPS_QUICKJSMM_CONTEXT_H_
 
 #include <array>
+#include <iostream>
 #include <libquickps/quickjsmm/value.hpp>
 #include <memory>
 #include <optional>

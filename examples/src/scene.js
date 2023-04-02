@@ -1,17 +1,49 @@
-/* global Point, view */
+/* global Point */
 
 import { m4, v3 } from 'twgl.js'
 
-export const project = ([x, y, z]) => {
-  const rad = 30 * (Math.PI / 180)
-  const a = 0.5 * Math.cos(rad)
-  const b = 0.5 * Math.sin(rad)
-  const newX = x + a * z
-  const newY = view.size.height - (y + b * z)
-  return new Point(newX, newY)
+const viewProjection = m4.create()
+const world = m4.identity()
+const worldViewProjection = m4.create()
+const origin = new Point()
+
+export const rotate = () => {
+  m4.multiply(
+    m4.rotationX(35 * (Math.PI / 180)),
+    m4.rotationY(-45 * (Math.PI / 180)),
+    world)
 }
 
-const fromPoint = (v) => {
+export const perspective = () => {
+  const fov = 30 * (Math.PI / 180)
+  const aspect = 1.0
+  const zNear = 0.5
+  const zFar = 100.0
+  const projection = m4.perspective(fov, aspect, zNear, zFar)
+  const projection2d = m4.create()
+  projection2d[0] = zNear
+  projection2d[5] = zNear
+  projection2d[10] = 1
+  projection2d[14] = -1
+  m4.multiply(projection, projection2d, viewProjection)
+  m4.multiply(viewProjection, world, worldViewProjection)
+  origin.set(project([0, 0, 0]))
+}
+
+export const ortho = () => {
+  const zNear = -1
+  const zFar = 1
+  m4.ortho(-1, 1, -1, 1, zNear, zFar, viewProjection)
+  m4.multiply(viewProjection, world, worldViewProjection)
+  origin.set(project([0, 0, 0]))
+}
+
+export const project = v => {
+  const [x, y] = m4.transformPoint(worldViewProjection, v)
+  return new Point(x, -y)
+}
+
+const fromPoint = v => {
   if (v instanceof Float32Array) {
     return v
   } else {
@@ -19,9 +51,9 @@ const fromPoint = (v) => {
   }
 }
 
-const fromArray = (arr) => arr.map(fromPoint)
+const fromArray = arr => arr.map(fromPoint)
 
-const edges = (model) => {
+const edges = model => {
   const edges = []
 
   for (const i of Array(model.length - 1).keys()) {
@@ -62,9 +94,56 @@ const replace = (model, p, q) => {
   }
 }
 
+const edgeRotation = ([a, b], angle) => {
+  const axis = v3.create()
+  v3.subtract(b, a, axis)
+  v3.normalize(axis, axis)
+  const rad = angle * Math.PI / 180
+  const m = m4.identity()
+  m4.translate(m, v3.negate(a))
+  m4.axisRotate(m, axis, rad, m)
+  m4.translate(m, a)
+  return m
+}
+
+const isFrontFace = ([a, b, c]) => a + b + c
+const defaultFrontStyle = { fillColor: 'hsl(120,80%,25%)' }
+const defaultBackStyle = { fillColor: 'hsl(240,100%,25%)' }
+const config = {
+  scale: 1.0,
+  center: new Point(),
+  frontStyle: defaultFrontStyle,
+  backStyle: defaultBackStyle
+}
+
 export class Scene {
-  constructor (path) {
+  static config ({ scale, center, frontStyle, backStyle }) {
+    if (scale !== undefined) {
+      config.scale = scale
+    }
+
+    if (center !== undefined) {
+      config.center.set(center)
+    }
+
+    if (frontStyle !== undefined) {
+      config.frontStyle = frontStyle
+    }
+
+    if (backStyle !== undefined) {
+      config.backStyle = backStyle
+    }
+  }
+
+  /**
+   * @param {Path} path - The underlying path object.
+   * @param {m4.Matrix} view - An optional view matrix.
+   * @param {m4.Matrix} transform - An optional transform matrix.
+   * @param {boolean} isFrontFace - An optional flag specifying whether the face is front or back.
+   */
+  constructor (path, { view = m4.identity(), transform = m4.identity(), isFrontFace = true } = {}) {
     this.path = path
+    this.data = { view, transform, isFrontFace }
   }
 
   get data () {
@@ -81,9 +160,10 @@ export class Scene {
    * @return {Scene} this instance for further method chaining.
    */
   project () {
-    const { model, transform } = this.data
-    this.data.target = model.map(v => m4.transformPoint(transform, v))
-    this.path.segments = this.data.target.map(project)
+    const { model, view } = this.data
+    this.path.segments = model.map(v => m4.transformPoint(view, v)).map(project)
+    if (config.scale !== 1.0) this.path.scale(config.scale, origin)
+    if (!config.center.isZero()) this.path.translate(config.center)
     return this
   }
 
@@ -91,19 +171,24 @@ export class Scene {
    * Attaches a data attribute to the underlying Path instance.
    *
    * @param {Array} model - an array of v3.Vec3 or tuples.
-   * @param {m4.Matrix} transform - An optional transform matrix.
    * @return {Scene} this instance for further method chaining.
    */
-  cylinder (model, transform = m4.identity()) {
-    this.data = { model: fromArray(model), transform }
+  cylinder (model) {
+    this.data.model = fromArray(model)
     return this
   }
 
   transform (...args) {
-    const { transform } = this.data
+    const { transform, view } = this.data
 
     for (const m of args) {
       m4.multiply(m, transform, transform)
+    }
+
+    if (this.data.parent !== undefined) {
+      m4.multiply(this.data.parent.data.transform, transform, view)
+    } else {
+      m4.copy(transform, view)
     }
 
     return this
@@ -154,10 +239,45 @@ export class Scene {
       }
     }
 
+    if (result.length === 0) {
+      throw new Error('Unable to separate: submodel has no intersection.')
+    }
+
     for (const [p, q] of result) {
       replace(this.data.model, p, q)
     }
 
     return this
+  }
+
+  addParent (scene) {
+    this.data.parent = scene
+    return scene.separate(this.data.model)
+  }
+
+  cull () {
+    // https://www.cubic.org/docs/backcull.htm
+    // https://www.khronos.org/opengl/wiki/Face_Culling
+    if (isFrontFace(this.path.segments)) {
+      this.path.set(config.frontStyle)
+    } else {
+      this.path.set(config.backStyle)
+    }
+
+    return this
+  }
+
+  onUpdate (delta, event) {
+    if (this._tween_counter-- < 0) return this
+    return this.transform(delta).project().cull()
+  }
+
+  fold (angle, { index = 0 }) {
+    this._tween_counter = 30
+    const { model } = this.data
+    const [, ...edge] = subPath(model, model[index])
+    const delta = edgeRotation(edge, angle / this._tween_counter)
+    return this.path.tween(1000)
+      .on('update', this.onUpdate.bind(this, delta))
   }
 }

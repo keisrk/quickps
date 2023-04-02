@@ -1,5 +1,5 @@
 /* global CompoundPath, Path, view */
-import { project } from './scene.js'
+import { perspective, project, ortho, rotate } from './scene.js'
 import { m4, v3 } from 'twgl.js'
 
 class Cube extends CompoundPath {
@@ -11,9 +11,9 @@ class Cube extends CompoundPath {
     for (const i of Array(8).keys()) {
       const sign = i % 8 < 4 ? 1 : -1
       const angle = (i % 4) * 90 * sign
-      const v = v3.create(sign * r, sign * r, sign * r)
+      const v = v3.create(sign * r, r, sign * r)
       const m = m4.identity()
-      m4.rotateY(m, angle * (Math.PI / 180), m)
+      m4.rotateZ(m, sign * angle * (Math.PI / 180), m)
       m4.transformPoint(m, v, v)
       points.push(v)
     }
@@ -25,12 +25,16 @@ class Cube extends CompoundPath {
 
     this.children[0].segments = points.filter(p => p[0] === r).map(project)
     this.children[1].segments = points.filter(p => p[1] === r).map(project)
-    this.children[2].segments = points.filter(p => p[2] === -r).map(project)
-
-    this.bounds.center = view.center
+    this.children[2].segments = points.filter(p => p[2] === r).map(project)
   }
 }
 
-/* eslint-disable no-new */
-new Cube(50)
-/* eslint-enable no-new */
+rotate()
+ortho()
+const o = new Cube(0.5)
+perspective()
+const p = new Cube(0.5)
+o.bounds.center = view.center - [200, 0]
+p.bounds.center = view.center
+o.scale(100)
+p.scale(100)

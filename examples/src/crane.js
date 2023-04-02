@@ -1,118 +1,116 @@
 /* global Group, Path, view */
 
-import { Scene } from './scene.js'
-import { m4 } from 'twgl.js'
+import { ortho, Scene } from './scene.js'
+import { complete, completeAll, Task } from './task.js'
 
-const ctx = new Group()
+const ctx = new Group({ data: { scenes: new Map() } })
 const tasks = []
 
-const isFrontSide = (p, a, b) => p.rotate((b - a).angle * -1, a).y < a.y
-
-tasks.push(class {
+tasks.push(class extends Task {
   constructor (ctx) {
-    this.name = '_ix'
-    const path = ctx.addChild(new Path({ name: this.name, fillColor: 'hsl(120,80%,25%)' }))
-    this.scene = new Scene(path)
+    super(ctx)
+    this.id = '_0'
+    const path = ctx.addChild(new Path({ name: this.id }))
+    this.set(this.id, new Scene(path)
       .cylinder([
         [1, 0],
         [0, 1],
         [-1, 0],
         [0, -1]
-      ])
-  }
+      ]))
 
-  next () {
-    this.scene
-      .project()
-    return { done: true }
+    this.get(this.id).project()
   }
 })
 
-tasks.push(class {
-  constructor (ctx, history) {
-    this.name = '_u6'
-    const path = ctx.addChild(new Path({ name: this.name }))
-    this.scene = new Scene(path)
+tasks.push(class extends Task {
+  constructor (ctx) {
+    super(ctx)
+    this.id = '_1'
+    const path = ctx.addChild(new Path({ name: this.id }))
+    this.set(this.id, new Scene(path))
+
+    this.get(this.id)
       .cylinder([
         [1, 0],
         [0, 1],
         [-1, 0]
       ])
-
-    history.get('_ix').scene
-      .separate(this.scene.data.model)
+      .addParent(this.get('_0'))
       .project()
   }
 
-  next () {
-    const angle = 180
-    this.scene
-      .transform(
-        m4.rotationX(angle * (Math.PI / 180))
-      )
-      .project()
-    const [{ point: a }, { point: p }, { point: b }] = this.scene.path.segments
-    this.scene.path.fillColor = isFrontSide(p, a, b) ? 'hsl(240,100%,50%)' : 'hsl(120,100%,25%)'
-    return { done: true }
+  complete () {
+    return complete(this.get(this.id).fold(180, { index: 2 }))
   }
 })
 
-tasks.push(class {
-  constructor (ctx, history) {
-    this.name = '_nl'
-    this.scenes = new Map()
-      .set('_gy', new Scene(ctx.addChild(new Path({ name: '_gy', fillColor: 'hsl(240,100%,50%)' })))
-        .cylinder([
-          [1, 0],
-          [0, -1],
-          [0, 0]
-        ],
-        history.get('_ix').scene.data.transform
-        ))
-      .set('_rs', new Scene(ctx.addChild(new Path({ name: '_rs', fillColor: 'hsl(240,100%,25%)' })))
-        .cylinder([
-          [1, 0],
-          [0, 1],
-          [0, 0]
-        ],
-        history.get('_u6').scene.data.transform
-        ))
+tasks.push(class extends Task {
+  constructor (ctx) {
+    super(ctx)
+    this.set('_2', new Scene(ctx.addChild(new Path({ name: '_2' }))))
+      .set('_3', new Scene(ctx.addChild(new Path({ name: '_3' }))))
 
-    history.get('_ix').scene
-      .separate(this.scenes.get('_gy').data.model)
+    this.get('_2')
+      .cylinder([
+        [1, 0],
+        [0, -1],
+        [0, 0]
+      ])
+      .addParent(this.get('_0'))
       .project()
 
-    history.get('_u6').scene
-      .separate(this.scenes.get('_rs').data.model)
+    this.get('_3')
+      .cylinder([
+        [1, 0],
+        [0, 1],
+        [0, 0]
+      ])
+      .addParent(this.get('_1'))
       .project()
   }
 
-  next () {
-    const angle = 180
-
-    for (const scene of this.scenes.values()) {
-      scene
-        .transform(m4.rotationY(angle * (Math.PI / 180)))
-        .project()
-    }
-
-    return { done: true }
+  complete () {
+    return Promise.all([
+      this.get('_2').fold(180, { index: 1 }),
+      this.get('_3').fold(180, { index: 1 })
+    ].map(complete))
   }
 })
 
-const history = new Map()
+tasks.push(class extends Task {
+  constructor (ctx) {
+    super(ctx)
+    this.set('_4', new Scene(ctx.addChild(new Path({ name: '_4' }))))
+      .set('_5', new Scene(ctx.addChild(new Path({ name: '_5' }))))
 
-for (const Task of tasks) {
-  const task = new Task(ctx, history)
+    this.get('_4')
+      .cylinder([
+        [1, 0],
+        [0.5, -0.5],
+        [0, 0]
+      ])
+      .addParent(this.get('_2'))
+      .project()
 
-  /* eslint-disable no-unused-vars, no-empty */
-  for (let { done } = task.next(); !done; { done } = task.next()) {}
-  /* eslint-enable no-unused-vars, no-empty */
+    this.get('_5')
+      .cylinder([
+        [1, 0],
+        [0.5, 0.5],
+        [0, 0]
+      ])
+      .addParent(this.get('_3'))
+      .project()
+  }
 
-  if (typeof task.terminate === 'function') task.terminate(ctx)
+  complete () {
+    return Promise.all([
+      this.get('_2').fold(90, { index: 1 }),
+      this.get('_4').fold(90, { index: 1 })
+    ].map(complete))
+  }
+})
 
-  history.set(task.name, task)
-}
-
-ctx.translate([view.center.x, -view.center.y])
-ctx.scale(100, view.center)
+ortho()
+Scene.config({ scale: 100, center: [view.center.x, view.center.y] })
+completeAll(ctx, tasks)

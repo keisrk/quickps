@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import logging
 import re
 from ctypes import (
@@ -16,19 +17,34 @@ from ctypes import (
     POINTER,
     Structure,
     Union,
+    string_at,
 )
 from ctypes.util import find_library
 from pathlib import Path
 from typing import List, Optional
 
 
-INCLUDE = re.compile(r"^\s*/\*#\*\/\s*include\('(?P<path>.+)'(,\s*\{.+\})?\);?$")
+INCLUDE = re.compile(r"^\s*/\*#\*\/\s*include\('(?P<path>[^']+)'(,\s*\{[^}]+\})?\);?$")
 SUBSTITUTE = re.compile(r"/\*#=\*/\s*(?P<js>\([^)]+\)|[\w\.]+)")
 JS_EVAL_TYPE_GLOBAL = 0
 JS_EVAL_TYPE_MODULE = 1 << 0
 JS_EVAL_FLAG_COMPILE_ONLY = 1 << 5
 JS_WRITE_OBJ_BYTECODE = 1 << 0
 JS_TAG_STRING = -7
+
+EXPECTED_NODE_MODULE_SHA256 = {
+    "acorn.js": "b95392d79457d0357555c5ed3e56302d074b92dff119bcf3b44179500b10e9df",
+    "straps.js": "9e0d4fadfaf374c161a48ee0096af18eceb890b48aceb5990970b9f43b4526d9",
+    "nodom.js": "8e602d38723bed02358d67f62b8dae7c4750a1906ecbdf42aec81a1b943ffaeb",
+}
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 class JsValueUnion(Union):
@@ -63,7 +79,7 @@ class QuickJs:
         cls.qjs.JS_IsError.argtypes = [c_void_p, JsValue]
         cls.qjs.JS_Eval.restype = JsValue
         cls.qjs.JS_Eval.argtypes = [c_void_p, c_char_p, c_size_t, c_char_p, c_int32]
-        cls.qjs.JS_ToCStringLen2.restype = c_char_p
+        cls.qjs.JS_ToCStringLen2.restype = c_void_p
         cls.qjs.JS_ToCStringLen2.argtypes = [
             c_void_p,
             c_void_p,
@@ -108,13 +124,17 @@ class QuickJs:
         result = self.qjs.JS_ToCStringLen2(self.ctx, None, ret, 0)
 
         if result is None:
+            self.free_value(ret)
             return
 
+        raw = string_at(result)
+        self.qjs.JS_FreeCString(self.ctx, result)
+
         if ret.tag == JS_TAG_STRING:
-            s = result.decode("utf-8")
+            s = raw.decode("utf-8")
             out = f"'{s}'"
         else:
-            out = result.decode("utf-8")
+            out = raw.decode("utf-8")
 
         self.free_value(ret)
         return out
@@ -157,7 +177,15 @@ class Prepro:
         self._engine = engine
         self._input_queue = []
         self._output = output
-        self._node_modules = node_modules
+        self._node_modules = node_modules or []
+        for nmod in self._node_modules:
+            expected = EXPECTED_NODE_MODULE_SHA256.get(nmod.name)
+            if expected is not None:
+                actual = _sha256_file(nmod)
+                if actual != expected:
+                    raise RuntimeError(
+                        f"SHA-256 mismatch for {nmod}: expected {expected}, got {actual}"
+                    )
 
     def __enter__(self):
         return self
@@ -173,14 +201,15 @@ class Prepro:
         self._engine.evaluate(code)
 
     def process(self, input_path: Path):
-        for line in self._load(input_path):
+        def _replace(m):
+            logging.info(f"Evaluating '{m['js']}'.")
+            repl = self._engine.evaluate(m["js"])
+            logging.info(f"Evaluated to '{repl}'.")
+            return repl
 
-            s = SUBSTITUTE.search(line)
-            if s:
-                logging.info(f"Evaluating '{s['js']}'.")
-                repl = self._engine.evaluate(s["js"])
-                logging.info(f"Evaluated to '{repl}'.")
-                line = SUBSTITUTE.sub(repl, line)
+        for line in self._load(input_path):
+            if SUBSTITUTE.search(line):
+                line = SUBSTITUTE.sub(_replace, line)
 
             self._output.write(line)
 
@@ -203,6 +232,8 @@ class Prepro:
                     break
 
                 yield line
+            else:
+                input.close()
 
     def _get_module_path(self, input_path: Path, module_path: str):
         if "node_modules" in module_path:
@@ -212,7 +243,11 @@ class Prepro:
                 if nmod.name == mod:
                     return nmod
 
-        return input_path.parent / module_path
+        base_dir = input_path.parent.resolve()
+        resolved = (base_dir / module_path).resolve()
+        if not resolved.is_relative_to(base_dir.parent):
+            raise ValueError(f"Path traversal blocked: {module_path}")
+        return resolved
 
 
 def bundle(engine: QuickJs, input_path: Path, args):

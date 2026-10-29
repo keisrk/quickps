@@ -15,7 +15,7 @@ protected:
 
 TEST_F(PaperJsTest, PaperJsGetByteCode) {
   auto buf = paper::GetByteCode();
-  EXPECT_EQ(buf.size(), 0x8c025);
+  EXPECT_EQ(buf.size(), 0x8c026);
 }
 
 TEST_F(PaperJsTest, LoadByteCode) {

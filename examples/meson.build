@@ -11,7 +11,16 @@ curl = find_program('curl')
 cdn = generator(
     curl,
     output: '@BASENAME@.js',
-    arguments: ['--config', '@INPUT@', '--output', '@OUTPUT@'],
+    arguments: [
+        '--fail',
+        '--proto',
+        '=https',
+        '--tlsv1.2',
+        '--config',
+        '@INPUT@',
+        '--output',
+        '@OUTPUT@',
+    ],
 )
 twgl = cdn.process('src/twgl.config')
 

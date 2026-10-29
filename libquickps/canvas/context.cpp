@@ -1,40 +1,90 @@
-#include <cairomm/context.h>
-#include <cairomm/matrix.h>
 #include <libquickps/canvas/facade.hpp>
+#include <utility>
 
 namespace quickps {
 namespace canvas {
 
-Context::Context(Cairo::RefPtr<Cairo::Context> ctx) : context_(ctx) {}
+namespace {
 
-Cairo::RefPtr<Cairo::Context> &Context::Impl() { return context_; }
-
-void Context::SavePath() {
-  path_ = Impl()->copy_path_flat();
-  Impl()->begin_new_path();
+BLFillRule ParseFillRule(const std::string &fill_rule) {
+  return "evenodd" == fill_rule ? BL_FILL_RULE_EVEN_ODD : BL_FILL_RULE_NON_ZERO;
 }
 
-void Context::RestorePath() {
-  Impl()->begin_new_path();
-  Impl()->append_path(*path_.value());
-  path_.reset();
+template <typename DrawFn>
+void DrawWithClipMask(BLContext &ctx, const std::optional<BLImage> &clip_mask,
+                      DrawFn &&draw_fn) {
+  if (!clip_mask.has_value()) {
+    draw_fn(ctx);
+    return;
+  }
+
+  const int w = static_cast<int>(ctx.target_width());
+  const int h = static_cast<int>(ctx.target_height());
+  BLImage layer(w, h, BL_FORMAT_PRGB32);
+  BLContext layer_ctx(layer);
+  layer_ctx.clear_all();
+  layer_ctx.set_hints(ctx.hints());
+  layer_ctx.set_approximation_options(ctx.approximation_options());
+  layer_ctx.set_global_alpha(ctx.global_alpha());
+  layer_ctx.set_fill_rule(ctx.fill_rule());
+  layer_ctx.set_stroke_options(ctx.stroke_options());
+
+  BLVar fill_style;
+  ctx.get_fill_style(fill_style);
+  layer_ctx.set_fill_style(fill_style);
+  layer_ctx.set_fill_alpha(ctx.fill_alpha());
+
+  BLVar stroke_style;
+  ctx.get_stroke_style(stroke_style);
+  layer_ctx.set_stroke_style(stroke_style);
+  layer_ctx.set_stroke_alpha(ctx.stroke_alpha());
+
+  layer_ctx.set_transform(ctx.user_transform());
+  draw_fn(layer_ctx);
+
+  layer_ctx.reset_transform();
+  layer_ctx.set_comp_op(BL_COMP_OP_DST_IN);
+  layer_ctx.blit_image(BLPointI(0, 0), *clip_mask);
+  layer_ctx.end();
+
+  ctx.save();
+  ctx.reset_transform();
+  ctx.blit_image(BLPointI(0, 0), layer);
+  ctx.restore();
 }
 
-void Context::Save() { Impl()->save(); }
-void Context::Restore() { Impl()->restore(); }
-void Context::Scale(double x, double y) { Impl()->scale(x, y); }
-void Context::Rotate(double angle) { Impl()->rotate(angle); }
-void Context::Translate(double x, double y) { Impl()->translate(x, y); }
+} // namespace
+
+Context::Context(BLContext ctx) : context_(std::move(ctx)) {}
+
+BLContext &Context::Impl() { return context_; }
+
+void Context::Save() {
+  clip_stack_.push_back(clip_mask_);
+  Impl().save();
+}
+
+void Context::Restore() {
+  if (!clip_stack_.empty()) {
+    clip_mask_ = std::move(clip_stack_.back());
+    clip_stack_.pop_back();
+  }
+  Impl().restore();
+}
+
+void Context::Scale(double x, double y) { Impl().scale(x, y); }
+void Context::Rotate(double angle) { Impl().rotate(angle); }
+void Context::Translate(double x, double y) { Impl().translate(x, y); }
 void Context::Transform(double a, double b, double c, double d, double e,
                         double f) {
-  const Cairo::Matrix m(a, b, c, d, e, f);
-  Impl()->transform(m);
+  const BLMatrix2D m(a, b, c, d, e, f);
+  Impl().apply_transform(m);
 }
 
 void Context::SetTransform(double a, double b, double c, double d, double e,
                            double f) {
-  const Cairo::Matrix m(a, b, c, d, e, f);
-  Impl()->set_matrix(m);
+  const BLMatrix2D m(a, b, c, d, e, f);
+  Impl().set_transform(m);
 }
 
 Style Context::CreateLinearGradient([[maybe_unused]] double x0,
@@ -59,60 +109,63 @@ Style Context::CreatePattern([[maybe_unused]] double image,
 }
 
 void Context::ClearRect(double x, double y, double width, double height) {
-  Impl()->save();
-  SavePath();
-  Impl()->rectangle(x, y, width, height);
-  Impl()->set_operator(Cairo::OPERATOR_CLEAR);
-  Impl()->fill();
-  RestorePath();
-  Impl()->restore();
+  if (!clip_mask_.has_value()) {
+    Impl().clear_rect(x, y, width, height);
+    return;
+  }
+
+  const int w = static_cast<int>(Impl().target_width());
+  const int h = static_cast<int>(Impl().target_height());
+  BLImage layer(w, h, BL_FORMAT_PRGB32);
+  BLContext layer_ctx(layer);
+  layer_ctx.clear_all();
+  layer_ctx.set_transform(Impl().user_transform());
+  layer_ctx.set_fill_style(BLRgba32(0xFFFFFFFFu));
+  layer_ctx.fill_rect(x, y, width, height);
+  layer_ctx.reset_transform();
+  layer_ctx.set_comp_op(BL_COMP_OP_DST_IN);
+  layer_ctx.blit_image(BLPointI(0, 0), *clip_mask_);
+  layer_ctx.end();
+
+  Impl().save();
+  Impl().reset_transform();
+  Impl().set_comp_op(BL_COMP_OP_DST_OUT);
+  Impl().blit_image(BLPointI(0, 0), layer);
+  Impl().restore();
 }
 
 void Context::FillRect(double x, double y, double width, double height) {
   if (0 == width || 0 == height)
     return;
 
-  SavePath();
-  Impl()->rectangle(x, y, width, height);
-  /*TODO: Needs custom logic here. */ Impl()->fill();
-  RestorePath();
+  DrawWithClipMask(Impl(), clip_mask_,
+                   [&](BLContext &ctx) { ctx.fill_rect(x, y, width, height); });
 }
 
 void Context::StrokeRect(double x, double y, double width, double height) {
   if (0 == width || 0 == height)
     return;
 
-  SavePath();
-  Impl()->rectangle(x, y, width, height);
-  /*TODO: Needs custom logic here. */ Impl()->stroke();
-  RestorePath();
+  DrawWithClipMask(Impl(), clip_mask_, [&](BLContext &ctx) {
+    ctx.stroke_rect(x, y, width, height);
+  });
 }
 
-void Context::BeginPath() { Impl()->begin_new_path(); }
+void Context::BeginPath() { path_.clear(); }
 
-void Context::ClosePath() { Impl()->close_path(); }
+void Context::ClosePath() { path_.close(); }
 
-void Context::MoveTo(double x, double y) { Impl()->move_to(x, y); }
+void Context::MoveTo(double x, double y) { path_.move_to(x, y); }
 
-void Context::LineTo(double x, double y) { Impl()->line_to(x, y); }
+void Context::LineTo(double x, double y) { path_.line_to(x, y); }
 
 void Context::QuadraticCurveTo(double cpx, double cpy, double x, double y) {
-  double current_x, current_y;
-  Impl()->get_current_point(current_x, current_y);
-
-  if (0 == current_x && 0 == current_y) {
-    current_x = cpx;
-    current_y = cpy;
-  }
-
-  Impl()->curve_to(current_x + 2.0 / 3.0 * (cpx - current_x),
-                   current_y + 2.0 / 3.0 * (cpy - current_y),
-                   x + 2.0 / 3.0 * (cpx - x), y + 2.0 / 3.0 * (cpy - y), x, y);
+  path_.quad_to(cpx, cpy, x, y);
 }
 
 void Context::BezierCurveTo(double cp1x, double cp1y, double cp2x, double cp2y,
                             double x, double y) {
-  Impl()->curve_to(cp1x, cp1y, cp2x, cp2y, x, y);
+  path_.cubic_to(cp1x, cp1y, cp2x, cp2y, x, y);
 }
 
 void Context::ArcTo([[maybe_unused]] double x1, [[maybe_unused]] double y1,
@@ -122,7 +175,7 @@ void Context::ArcTo([[maybe_unused]] double x1, [[maybe_unused]] double y1,
 }
 
 void Context::Rect(double x, double y, double width, double height) {
-  Impl()->rectangle(x, y, width, height);
+  path_.add_rect(x, y, width, height);
 }
 
 void Context::Arc([[maybe_unused]] double x, [[maybe_unused]] double y,
@@ -133,36 +186,60 @@ void Context::Arc([[maybe_unused]] double x, [[maybe_unused]] double y,
   throw Unimplemented();
 }
 
-void Context::Fill() { Impl()->fill(); }
-
-void Context::Fill(const std::string &fill_rule) {
-  auto rule = "evenodd" == fill_rule ? Cairo::FILL_RULE_EVEN_ODD
-                                     : Cairo::FILL_RULE_WINDING;
-  Impl()->set_fill_rule(rule);
-  Impl()->fill();
+void Context::Fill() {
+  DrawWithClipMask(Impl(), clip_mask_,
+                   [this](BLContext &ctx) { ctx.fill_path(path_); });
 }
 
-void Context::Stroke() { Impl()->stroke(); }
+void Context::Fill(const std::string &fill_rule) {
+  Impl().set_fill_rule(ParseFillRule(fill_rule));
+  Fill();
+}
 
-void Context::Clip() { Impl()->clip(); }
+void Context::Stroke() {
+  DrawWithClipMask(Impl(), clip_mask_,
+                   [this](BLContext &ctx) { ctx.stroke_path(path_); });
+}
+
+void Context::Clip() {
+  const int w = static_cast<int>(Impl().target_width());
+  const int h = static_cast<int>(Impl().target_height());
+  BLImage new_mask(w, h, BL_FORMAT_PRGB32);
+  BLContext mask_ctx(new_mask);
+  mask_ctx.clear_all();
+  mask_ctx.set_transform(Impl().user_transform());
+  mask_ctx.set_fill_rule(Impl().fill_rule());
+  mask_ctx.set_fill_style(BLRgba32(0xFFFFFFFFu));
+  mask_ctx.fill_path(path_);
+  if (clip_mask_.has_value()) {
+    mask_ctx.reset_transform();
+    mask_ctx.set_comp_op(BL_COMP_OP_DST_IN);
+    mask_ctx.blit_image(BLPointI(0, 0), *clip_mask_);
+  }
+  mask_ctx.end();
+  clip_mask_ = std::move(new_mask);
+}
 
 void Context::Clip(const std::string &fill_rule) {
-  auto rule = "evenodd" == fill_rule ? Cairo::FILL_RULE_EVEN_ODD
-                                     : Cairo::FILL_RULE_WINDING;
-  Impl()->set_fill_rule(rule);
-  Impl()->clip();
+  Impl().set_fill_rule(ParseFillRule(fill_rule));
+  Clip();
 }
 
 bool Context::IsPointInPath(double x, double y) {
-  return Impl()->in_fill(x, y) || Impl()->in_stroke(x, y);
+  return path_.hit_test(BLPoint(x, y), Impl().fill_rule()) == BL_HIT_TEST_IN;
 }
 
 bool Context::IsPointInPath(double x, double y, const std::string &fill_rule) {
-  auto rule = "evenodd" == fill_rule ? Cairo::FILL_RULE_EVEN_ODD
-                                     : Cairo::FILL_RULE_WINDING;
-  Impl()->set_fill_rule(rule);
-  auto result = IsPointInPath(x, y);
-  return result;
+  Impl().set_fill_rule(ParseFillRule(fill_rule));
+  return IsPointInPath(x, y);
+}
+
+void Context::SetFillStyle(const Color &color) {
+  Impl().set_fill_style(BLRgba(color.r, color.g, color.b, color.a));
+}
+
+void Context::SetStrokeStyle(const Color &color) {
+  Impl().set_stroke_style(BLRgba(color.r, color.g, color.b, color.a));
 }
 
 void Context::FillText([[maybe_unused]] double text, [[maybe_unused]] double x,
@@ -206,14 +283,13 @@ void Context::PutImageData([[maybe_unused]] double imagedata,
 void Context::SetLineDash([[maybe_unused]] double array) {}
 
 Canvas::Canvas(int width, int height)
-    : surface_(Cairo::ImageSurface::create(Cairo::Format::FORMAT_ARGB32, width,
-                                           height)) {}
-
-Cairo::RefPtr<Cairo::ImageSurface> &Canvas::Impl() { return surface_; }
-
-const Context Canvas::CreateContext() {
-  return Context(Cairo::Context::create(surface_));
+    : surface_(width, height, BL_FORMAT_PRGB32) {
+  BLContext(surface_).clear_all();
 }
+
+BLImage &Canvas::Impl() { return surface_; }
+
+const Context Canvas::CreateContext() { return Context(BLContext(surface_)); }
 
 const char *Canvas::GetAttribute([[maybe_unused]] const char *attr) {
   return "nope";
@@ -221,7 +297,9 @@ const char *Canvas::GetAttribute([[maybe_unused]] const char *attr) {
 
 bool Canvas::HasAttribute([[maybe_unused]] const char *attr) { return false; }
 
-void Canvas::Write(std::filesystem::path &png) { surface_->write_to_png(png); }
+void Canvas::Write(std::filesystem::path &png) {
+  surface_.write_to_file(png.c_str());
+}
 
 quickjs::Entry &Canvas::CreateCanvas() {
   static quickjs::Entry kEntry = quickjs::EntryBuilder<>()

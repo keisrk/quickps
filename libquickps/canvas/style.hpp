@@ -1,7 +1,7 @@
 #ifndef QUICKPS_CANVAS_STYLE_H_
 #define QUICKPS_CANVAS_STYLE_H_
 
-#include <cairomm/cairomm.h>
+#include <blend2d/blend2d.h>
 #include <libquickps/canvas/color.hpp>
 #include <variant>
 
@@ -9,15 +9,15 @@ namespace quickps {
 namespace canvas {
 
 struct Style final {
-  using Type = std::variant<Color, Cairo::RefPtr<Cairo::Pattern>>;
+  using Type = std::variant<Color, BLPattern>;
   Type value;
 
   Style(const Color &color);
-  Style(const Cairo::RefPtr<Cairo::Pattern> pattern);
+  Style(const BLPattern &pattern);
 
 public:
   Style FromColor(const Color &);
-  Style FromPattern(const Cairo::RefPtr<Cairo::Pattern> pattern);
+  Style FromPattern(const BLPattern &pattern);
 };
 
 } // namespace canvas

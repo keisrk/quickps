@@ -11,10 +11,44 @@ protected:
   void TearDown() override { qjs::Runtime::Terminate(); }
 };
 
-TEST_F(CanvasRenderingContext2dTest, CairommApi) {
+TEST_F(CanvasRenderingContext2dTest, Blend2dApi) {
   auto canvas = Canvas(600, 480);
   const auto &ctx = canvas.CreateContext();
   EXPECT_NE(&ctx, nullptr);
+}
+
+TEST_F(CanvasRenderingContext2dTest, ClipShim) {
+  auto canvas = Canvas(100, 100);
+  auto ctx = canvas.CreateContext();
+
+  ctx.Save();
+  ctx.BeginPath();
+  ctx.MoveTo(50, 20);
+  ctx.LineTo(80, 80);
+  ctx.LineTo(20, 80);
+  ctx.ClosePath();
+  ctx.Clip();
+
+  ctx.SetFillStyle(Color(1.0f, 0.0f, 0.0f, 1.0f));
+  ctx.FillRect(0, 0, 100, 100);
+  ctx.Restore();
+
+  BLImageData data{};
+  ASSERT_EQ(canvas.Impl().get_data(&data), BL_SUCCESS);
+  const auto *pixels = static_cast<const uint32_t *>(data.pixel_data);
+  const auto stride = data.stride / sizeof(uint32_t);
+
+  // Inside triangle (50, 50) should be red (0xFFFF0000 in PRGB32)
+  EXPECT_EQ(pixels[50 * stride + 50], 0xFFFF0000U);
+  // Outside triangle (10, 10) should be transparent (0x00000000)
+  EXPECT_EQ(pixels[10 * stride + 10], 0x00000000U);
+
+  // After Restore(), clipping should be removed
+  ctx.SetFillStyle(Color(0.0f, 1.0f, 0.0f, 1.0f));
+  ctx.FillRect(0, 0, 20, 20);
+  ASSERT_EQ(canvas.Impl().get_data(&data), BL_SUCCESS);
+  pixels = static_cast<const uint32_t *>(data.pixel_data);
+  EXPECT_EQ(pixels[10 * stride + 10], 0xFF00FF00U);
 }
 
 TEST_F(CanvasRenderingContext2dTest, CreateCanvasJSInterop) {

@@ -55,7 +55,6 @@ TBA
 ## Development
 
 - Requires Meson, ninja and curl to compile the project.
-- Depends on `libcairomm-1.0-dev` and `libgtest-dev`.
 
 ```bash
 git clone git@github.com:keisrk/quickps.git

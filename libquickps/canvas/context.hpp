@@ -1,8 +1,7 @@
 #ifndef QUICKPS_CANVAS_CONTEXT_H_
 #define QUICKPS_CANVAS_CONTEXT_H_
 
-#include <cairomm/cairomm.h>
-#include <cairomm/surface.h>
+#include <blend2d/blend2d.h>
 #include <exception>
 #include <filesystem>
 #include <libquickps/canvas/style.hpp>
@@ -12,6 +11,7 @@
 #include <string> // Prefer enum ...
 #include <type_traits>
 #include <variant>
+#include <vector>
 
 namespace quickps {
 namespace canvas {
@@ -20,8 +20,8 @@ class Unimplemented : public std::exception {};
 
 class Context final {
 public:
-  Context(Cairo::RefPtr<Cairo::Context> ctx);
-  Cairo::RefPtr<Cairo::Context> &Impl();
+  Context(BLContext ctx);
+  BLContext &Impl();
   void Save();
   void Restore();
   void Scale(double x, double y);
@@ -90,10 +90,10 @@ public:
   int lineDashOffset;
 
 private:
-  Cairo::RefPtr<Cairo::Context> context_;
-  std::optional<std::add_pointer<Cairo::Path>::type> path_;
-  void SavePath();
-  void RestorePath();
+  BLContext context_;
+  BLPath path_;
+  std::optional<BLImage> clip_mask_;
+  std::vector<std::optional<BLImage>> clip_stack_;
 };
 
 class Canvas final {
@@ -102,14 +102,14 @@ public:
   Canvas(int width, int height);
   Canvas(const Canvas &) = delete;
   Canvas &operator=(const Canvas &) = delete;
-  Cairo::RefPtr<Cairo::ImageSurface> &Impl();
+  BLImage &Impl();
   const Context CreateContext();
   const char *GetAttribute(const char *attr);
   bool HasAttribute(const char *attr);
   void Write(std::filesystem::path &png);
 
 private:
-  Cairo::RefPtr<Cairo::ImageSurface> surface_;
+  BLImage surface_;
 };
 
 } // namespace canvas

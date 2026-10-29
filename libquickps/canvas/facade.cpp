@@ -16,7 +16,7 @@ void SetFillStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     auto css_color = value.Get<std::string>(ctx);
     auto color = Color::FromString(css_color);
-    c2d->Impl()->set_source_rgba(color.r, color.g, color.b, color.a);
+    c2d->SetFillStyle(color);
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     [[maybe_unused]] auto pattern =
@@ -32,10 +32,11 @@ qjs::Value GetStrokeStyle([[maybe_unused]] qjs::Context &ctx,
   return qjs::Value::GetUndefined();
 }
 
-void SetStrokeStyle(qjs::Context &ctx, [[maybe_unused]] Context *c2d,
-                    qjs::Value value) {
+void SetStrokeStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
-    [[maybe_unused]] auto color = value.Get<std::string>(ctx);
+    auto css_color = value.Get<std::string>(ctx);
+    auto color = Color::FromString(css_color);
+    c2d->SetStrokeStyle(color);
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     [[maybe_unused]] auto pattern =
@@ -466,13 +467,13 @@ qjs::Value GetContext(qjs::Context &ctx, Canvas *canvas,
 }
 
 qjs::Value get_width(qjs::Context &ctx, Canvas *canvas) {
-  return ctx.Get(canvas->Impl()->get_width());
+  return ctx.Get(canvas->Impl().width());
 }
 
 void set_width(qjs::Context &, Canvas *, qjs::Value) {}
 
 qjs::Value get_height(qjs::Context &ctx, Canvas *canvas) {
-  return ctx.Get(canvas->Impl()->get_height());
+  return ctx.Get(canvas->Impl().height());
 }
 
 void set_height(qjs::Context &, Canvas *, qjs::Value) {}

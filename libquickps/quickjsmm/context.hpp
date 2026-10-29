@@ -28,7 +28,10 @@ public:
 
   template <class T> static void Dtor(T *ptr) {
     auto rt = Runtime::GetInstance();
-    js_free_rt(rt.cobj_.value(), ptr);
+    if (ptr) {
+      ptr->~T();
+      js_free_rt(rt.cobj_.value(), ptr);
+    }
   }
 
   template <class T>

@@ -53,7 +53,16 @@ void Context::Set(double &ref, Value val) {
 
 void Context::Set(std::string &ref, Value val) {
   auto js_str = JS_ToString(cobj_, val.cobj());
-  ref.assign(JS_ToCString(cobj_, js_str));
+  if (JS_IsException(js_str)) {
+    throw Exception();
+  }
+  auto *c_str = JS_ToCString(cobj_, js_str);
+  JS_FreeValue(cobj_, js_str);
+  if (!c_str) {
+    throw Exception();
+  }
+  ref.assign(c_str);
+  JS_FreeCString(cobj_, c_str);
 }
 
 Value Context::WrapValue(JSValue v) {

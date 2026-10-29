@@ -53,10 +53,16 @@ public:
 
     static JSCFunction *generic = [](auto *js_ctx, auto this_val, int argc,
                                      auto *argv) {
-      Context ctx(js_ctx);
-      Value me(this_val);
-      ArgumentList args(argc, argv);
-      return F(ctx, me, args.begin(), args.end()).cobj();
+      try {
+        Context ctx(js_ctx);
+        Value me(this_val);
+        ArgumentList args(argc, argv);
+        return F(ctx, me, args.begin(), args.end()).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
     };
 
     entry_.u.func.length = argc;
@@ -75,10 +81,16 @@ public:
     DefType(JS_DEF_CGETSET);
 
     static auto getter = [](auto *js_ctx, auto js_this_val) {
-      Context ctx(js_ctx);
-      Value this_val(js_this_val);
-      C *ptr = ctx.GetOpaque<C>(this_val);
-      return G(ctx, ptr).cobj();
+      try {
+        Context ctx(js_ctx);
+        Value this_val(js_this_val);
+        C *ptr = ctx.GetOpaque<C>(this_val);
+        return G(ctx, ptr).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
     };
 
     entry_.u.getset.get.getter = getter;
@@ -92,12 +104,18 @@ public:
     DefType(JS_DEF_CGETSET);
 
     static auto setter = [](auto *js_ctx, auto js_this_val, auto js_val) {
-      Context ctx(js_ctx);
-      Value this_val(js_this_val);
-      C *ptr = ctx.GetOpaque<C>(this_val);
-      Value v(js_val);
-      S(ctx, ptr, v);
-      return js_val;
+      try {
+        Context ctx(js_ctx);
+        Value this_val(js_this_val);
+        C *ptr = ctx.GetOpaque<C>(this_val);
+        Value v(js_val);
+        S(ctx, ptr, v);
+        return js_val;
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
     };
 
     entry_.u.getset.set.setter = setter;
@@ -112,11 +130,17 @@ public:
 
     static JSCFunction *generic = [](auto *js_ctx, auto js_this_val, int argc,
                                      auto *argv) {
-      Context ctx(js_ctx);
-      Value this_val(js_this_val);
-      ArgumentList args(argc, argv);
-      C *ptr = ctx.GetOpaque<C>(this_val);
-      return M(ctx, ptr, args.begin(), args.end()).cobj();
+      try {
+        Context ctx(js_ctx);
+        Value this_val(js_this_val);
+        ArgumentList args(argc, argv);
+        C *ptr = ctx.GetOpaque<C>(this_val);
+        return M(ctx, ptr, args.begin(), args.end()).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
     };
 
     entry_.u.func.length = argc;
@@ -145,11 +169,17 @@ public:
   template <Ctor<C> CTOR> ClassBuilder &Constructor(size_t argc) {
     static auto ctor = [](auto *js_ctx, auto js_base_val, int argc,
                           auto *argv) {
-      Context ctx(js_ctx);
-      Value base_val(js_base_val);
-      ArgumentList args(argc, argv);
-      auto ptr = CTOR(ctx, args.begin(), args.end());
-      return ctx.CreateOpaque<C>(std::move(ptr), base_val).cobj();
+      try {
+        Context ctx(js_ctx);
+        Value base_val(js_base_val);
+        ArgumentList args(argc, argv);
+        auto ptr = CTOR(ctx, args.begin(), args.end());
+        return ctx.CreateOpaque<C>(std::move(ptr), base_val).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
     };
 
     ctor_argc_ = argc;

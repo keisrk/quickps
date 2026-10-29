@@ -66,7 +66,8 @@ int main(int argc, char **argv) {
       break;
 
     case 's':
-      if (2 == std::sscanf(optarg, "%dx%d", &width, &height)) {
+      if (2 == std::sscanf(optarg, "%dx%d", &width, &height) && width > 0 &&
+          height > 0 && width <= 16384 && height <= 16384) {
         break;
       } else {
         [[fallthrough]];
@@ -83,6 +84,10 @@ int main(int argc, char **argv) {
     Run(std::cin, output_path, width, height);
   } else {
     std::ifstream input(input_path);
+    if (!input.is_open()) {
+      std::cerr << "Failed to open input file: " << input_path << "\n";
+      return EXIT_FAILURE;
+    }
     Run(input, output_path, width, height);
   }
 

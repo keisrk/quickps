@@ -80,6 +80,10 @@ Context::Context(BLContext ctx) : context_(std::move(ctx)) {
 BLContext &Context::Impl() { return context_; }
 
 void Context::Save() {
+  constexpr size_t kMaxSaveDepth = 1024;
+  if (clip_stack_.size() >= kMaxSaveDepth) {
+    throw quickjs::Exception();
+  }
   clip_stack_.push_back(clip_mask_);
   Impl().save();
 }
@@ -647,8 +651,15 @@ void Context::SetGlobalCompositeOperation(const std::string &op) {
   }
 }
 
-Canvas::Canvas(int width, int height)
-    : surface_(width, height, BL_FORMAT_PRGB32) {
+Canvas::Canvas(int width, int height) {
+  constexpr int kMaxCanvasDimension = 16384;
+  if (width <= 0 || height <= 0 || width > kMaxCanvasDimension ||
+      height > kMaxCanvasDimension) {
+    throw quickjs::Exception();
+  }
+  if (surface_.create(width, height, BL_FORMAT_PRGB32) != BL_SUCCESS) {
+    throw quickjs::Exception();
+  }
   BLContext(surface_).clear_all();
 }
 
@@ -663,7 +674,9 @@ const char *Canvas::GetAttribute([[maybe_unused]] const char *attr) {
 bool Canvas::HasAttribute([[maybe_unused]] const char *attr) { return false; }
 
 void Canvas::Write(std::filesystem::path &png) {
-  surface_.write_to_file(png.c_str());
+  if (surface_.write_to_file(png.c_str()) != BL_SUCCESS) {
+    throw quickjs::Exception();
+  }
 }
 
 quickjs::Entry &Canvas::CreateCanvas() {

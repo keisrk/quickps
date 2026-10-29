@@ -53,13 +53,29 @@ bool Value::IsUndefined() {
 
 JSValue &Value::cobj() { return cobj_; }
 
-ValueIter::reference ValueIter::operator*() { return current_.value(); }
+ValueIter::reference ValueIter::operator*() {
+  if (!current_.has_value()) {
+    throw Exception();
+  }
+  return current_.value();
+}
 
-ValueIter::pointer ValueIter::operator->() { return &current_.value(); }
+ValueIter::pointer ValueIter::operator->() {
+  if (!current_.has_value()) {
+    throw Exception();
+  }
+  return &current_.value();
+}
 
 ValueIter &ValueIter::operator++() {
-  count_++;
-  current_.emplace(js_values_[count_]);
+  if (count_ < argc_) {
+    count_++;
+  }
+  if (count_ < argc_) {
+    current_.emplace(js_values_[count_]);
+  } else {
+    current_.reset();
+  }
   return *this;
 }
 

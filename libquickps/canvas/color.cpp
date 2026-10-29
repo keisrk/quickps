@@ -52,42 +52,46 @@ Color Color::FromHsla(int hue, int saturation, int lightness, float alpha) {
 Color Color::FromString(const std::string &str) {
   std::smatch match_result;
 
-  if (std::regex_match(str, match_result, kHex)) {
-    auto hex = std::stoul(match_result[1], nullptr, 16);
+  try {
+    if (std::regex_match(str, match_result, kHex)) {
+      auto hex = std::stoul(match_result[1], nullptr, 16);
 
-    if (match_result[1].length() == 6) {
-      return Color::Create((hex << 8) | 0xff);
+      if (match_result[1].length() == 6) {
+        return Color::Create((hex << 8) | 0xff);
+      } else {
+        uint32_t r = (hex >> 8) & 0xf;
+        uint32_t g = (hex >> 4) & 0xf;
+        uint32_t b = hex & 0xf;
+        return Color::Create((r * 0x11 << 24) | (g * 0x11 << 16) |
+                             (b * 0x11 << 8) | 0xff);
+      }
+    } else if (std::regex_match(str, match_result, kRgba)) {
+      auto r = std::stof(match_result[1]) / 255;
+      auto g = std::stof(match_result[2]) / 255;
+      auto b = std::stof(match_result[3]) / 255;
+      auto a = std::stof(match_result[4]) / 255;
+      return Color(r, g, b, a);
+    } else if (std::regex_match(str, match_result, kRgb)) {
+      auto r = std::stof(match_result[1]) / 255;
+      auto g = std::stof(match_result[2]) / 255;
+      auto b = std::stof(match_result[3]) / 255;
+      return Color(r, g, b, 1.);
+    } else if (std::regex_match(str, match_result, kHsla)) {
+      auto hue = std::stoi(match_result[1]);
+      auto saturation = std::stoi(match_result[2]);
+      auto lightness = std::stoi(match_result[3]);
+      auto alpha = std::stof(match_result[4]) / 255;
+      return Color::FromHsla(hue, saturation, lightness, alpha);
+    } else if (std::regex_match(str, match_result, kHsl)) {
+      auto hue = std::stoi(match_result[1]);
+      auto saturation = std::stoi(match_result[2]);
+      auto lightness = std::stoi(match_result[3]);
+      return Color::FromHsla(hue, saturation, lightness, 1.0);
     } else {
-      uint32_t r = (hex >> 8) & 0xf;
-      uint32_t g = (hex >> 4) & 0xf;
-      uint32_t b = hex & 0xf;
-      return Color::Create((r * 0x11 << 24) | (g * 0x11 << 16) |
-                           (b * 0x11 << 8) | 0xff);
+      return Color::FromName(str);
     }
-  } else if (std::regex_match(str, match_result, kRgba)) {
-    auto r = std::stof(match_result[1]) / 255;
-    auto g = std::stof(match_result[2]) / 255;
-    auto b = std::stof(match_result[3]) / 255;
-    auto a = std::stof(match_result[4]) / 255;
-    return Color(r, g, b, a);
-  } else if (std::regex_match(str, match_result, kRgb)) {
-    auto r = std::stof(match_result[1]) / 255;
-    auto g = std::stof(match_result[2]) / 255;
-    auto b = std::stof(match_result[3]) / 255;
-    return Color(r, g, b, 1.);
-  } else if (std::regex_match(str, match_result, kHsla)) {
-    auto hue = std::stoi(match_result[1]);
-    auto saturation = std::stoi(match_result[2]);
-    auto lightness = std::stoi(match_result[3]);
-    auto alpha = std::stof(match_result[4]) / 255;
-    return Color::FromHsla(hue, saturation, lightness, alpha);
-  } else if (std::regex_match(str, match_result, kHsl)) {
-    auto hue = std::stoi(match_result[1]);
-    auto saturation = std::stoi(match_result[2]);
-    auto lightness = std::stoi(match_result[3]);
-    return Color::FromHsla(hue, saturation, lightness, 1.0);
-  } else {
-    return Color::FromName(str);
+  } catch (const std::exception &) {
+    return Color::Create(0x000000FF);
   }
 }
 
@@ -243,7 +247,11 @@ Color Color::FromName(const std::string &str) {
       {"yellow", 0xFFFF00FF},
       {"yellowgreen", 0x9ACD32FF}};
 
-  return Color::Create(kNamedColors.at(str));
+  auto it = kNamedColors.find(str);
+  if (it == kNamedColors.end()) {
+    return Color::Create(0x000000FF);
+  }
+  return Color::Create(it->second);
 }
 
 } // namespace canvas

@@ -17,11 +17,7 @@ void EnsureStyleClassRegistered(qjs::Context &ctx) {
     JSClassDef def{};
     def.class_name = "CanvasStyle";
     def.finalizer = [](JSRuntime *, JSValue val) {
-      auto rt_inst = qjs::Runtime::GetInstance();
-      if (auto *ptr = rt_inst.GetOpaque<Style>(qjs::Value(val))) {
-        ptr->~Style();
-        qjs::Runtime::Dtor<Style>(ptr);
-      }
+      qjs::Runtime::GetInstance().Finalize<Style>(qjs::Value(val));
     };
     qjs::Runtime::GetInstance().Register<Style>(def);
   }
@@ -29,19 +25,25 @@ void EnsureStyleClassRegistered(qjs::Context &ctx) {
 
 JSValue AddColorStop(JSContext *js_ctx, JSValueConst this_val, int argc,
                      JSValueConst *argv) {
-  if (argc < 2) {
-    throw qjs::Exception();
+  try {
+    if (argc < 2) {
+      throw qjs::Exception();
+    }
+    qjs::Context ctx(js_ctx);
+    auto *style = ctx.GetOpaque<Style>(qjs::Value(this_val));
+    double offset = qjs::Value(argv[0]).Get<double>(ctx);
+    auto color_str = qjs::Value(argv[1]).Get<std::string>(ctx);
+    auto color = Color::FromString(color_str);
+    if (auto *grad = std::get_if<BLGradient>(&style->value)) {
+      grad->add_stop(offset,
+                     BLRgba(color.r, color.g, color.b, color.a).to_rgba32());
+    }
+    return qjs::Value::GetUndefined().cobj();
+  } catch (const std::exception &e) {
+    return JS_ThrowInternalError(js_ctx, "%s", e.what());
+  } catch (...) {
+    return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
   }
-  qjs::Context ctx(js_ctx);
-  auto *style = ctx.GetOpaque<Style>(qjs::Value(this_val));
-  double offset = qjs::Value(argv[0]).Get<double>(ctx);
-  auto color_str = qjs::Value(argv[1]).Get<std::string>(ctx);
-  auto color = Color::FromString(color_str);
-  if (auto *grad = std::get_if<BLGradient>(&style->value)) {
-    grad->add_stop(offset,
-                   BLRgba(color.r, color.g, color.b, color.a).to_rgba32());
-  }
-  return qjs::Value::GetUndefined().cobj();
 }
 
 qjs::Value CreateStyleObject(qjs::Context &ctx, Style style) {

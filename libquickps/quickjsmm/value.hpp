@@ -59,6 +59,9 @@ public:
       return tmp;
     } else if constexpr (std::is_same<T, std::string>::value) {
       auto c_str = JS_ToCString(ctx.cobj(), cobj_);
+      if (!c_str) {
+        throw Exception();
+      }
       std::string result(c_str);
       JS_FreeCString(ctx.cobj(), c_str);
       return result;

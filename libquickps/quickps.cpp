@@ -114,8 +114,9 @@ PaperScript::PaperScript(QuickPs &qps, quickjs::Value scope)
 
 PaperExecutable PaperScript::Compile(const char *source) {
   auto engine = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScript");
-  auto ps = qps_.ctx().Get(source);
-  auto compiled = quickjs::RcValue(qps_.ctx(), engine.Invoke("compile", {ps}));
+  auto ps = quickjs::RcValue(qps_.ctx(), qps_.ctx().Get(source));
+  auto compiled =
+      quickjs::RcValue(qps_.ctx(), engine.Invoke("compile", {ps.value()}));
 
   if (compiled.IsException())
     throw quickjs::Exception();
@@ -130,7 +131,9 @@ PaperExecutable PaperScript::Compile(const std::string &source) {
 void PaperScript::Execute(const PaperExecutable &exe) {
   auto engine = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScript");
   {
-    auto ret = engine.Invoke("execute", {exe.code, scope_.value()});
+    auto compiled = qps_.ctx().GetObject({});
+    compiled.Set("code", exe.code);
+    auto ret = engine.Invoke("execute", {compiled.value(), scope_.value()});
 
     if (ret.IsException()) {
       JS_FreeValue(qps_.ctx().cobj(), ret.cobj());

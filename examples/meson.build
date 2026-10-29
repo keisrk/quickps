@@ -59,7 +59,7 @@ pytest_args = [
     '@0@/tests'.format(meson.current_source_dir()),
     '--html',
     'examples.html',
-    '--qpsc=@0@'.format(qpsc_exe.path()),
+    '--qpsc=@0@'.format(qpsc_exe.full_path()),
 ]
 
 foreach js : paperscripts

@@ -77,10 +77,14 @@ private:
   JSValue cobj_;
 };
 
-using ValueIterator = std::iterator<std::input_iterator_tag, Value>;
-
-class ValueIter : public ValueIterator {
+class ValueIter {
 public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = Value;
+  using difference_type = std::ptrdiff_t;
+  using pointer = Value *;
+  using reference = Value &;
+
   reference operator*();
   pointer operator->();
   ValueIter &operator++();
@@ -125,7 +129,7 @@ public:
   RcValue(const RcValue &) = delete;
   RcValue &operator=(const RcValue &) = delete;
   RcValue(RcValue &&);
-  RcValue &operator=(RcValue &&) = default;
+  RcValue &operator=(RcValue &&) = delete;
   bool IsException();
   RcValue Get(const char *prop);
   void Set(const char *prop, Value v);

@@ -53,9 +53,9 @@ bool Value::IsUndefined() {
 
 JSValue &Value::cobj() { return cobj_; }
 
-ValueIterator::reference ValueIter::operator*() { return current_.value(); }
+ValueIter::reference ValueIter::operator*() { return current_.value(); }
 
-ValueIterator::pointer ValueIter::operator->() { return &current_.value(); }
+ValueIter::pointer ValueIter::operator->() { return &current_.value(); }
 
 ValueIter &ValueIter::operator++() {
   count_++;

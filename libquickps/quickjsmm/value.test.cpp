@@ -22,7 +22,7 @@ protected:
     JS_FreeRuntime(rt_);
   }
 
-  JSContext *cobj() { return ctx_; }
+  JSContext *cobj() override { return ctx_; }
 
   JSRuntime *rt_;
   JSContext *ctx_;

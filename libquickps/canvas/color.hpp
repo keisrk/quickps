@@ -1,6 +1,7 @@
 #ifndef QUICKPS_CANVAS_COLOR_H_
 #define QUICKPS_CANVAS_COLOR_H_
 
+#include <cstdint>
 #include <string>
 
 namespace quickps {

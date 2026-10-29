@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/bellard/quickjs.git
-revision = master
+revision = b5e62895c619d4ffc75c9d822c8d85f1ece77e5b
 patch_directory = quickjs
 
 [provide]

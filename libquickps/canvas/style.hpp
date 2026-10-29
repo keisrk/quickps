@@ -9,15 +9,17 @@ namespace quickps {
 namespace canvas {
 
 struct Style final {
-  using Type = std::variant<Color, BLPattern>;
+  using Type = std::variant<Color, BLGradient, BLPattern>;
   Type value;
 
   Style(const Color &color);
+  Style(const BLGradient &gradient);
   Style(const BLPattern &pattern);
 
 public:
-  Style FromColor(const Color &);
-  Style FromPattern(const BLPattern &pattern);
+  static Style FromColor(const Color &);
+  static Style FromGradient(const BLGradient &gradient);
+  static Style FromPattern(const BLPattern &pattern);
 };
 
 } // namespace canvas

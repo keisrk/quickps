@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <libquickps/canvas/facade.hpp>
 
@@ -7,9 +8,75 @@ namespace facade {
 
 namespace qjs = quickps::quickjs;
 
-qjs::Value GetFillStyle([[maybe_unused]] qjs::Context &ctx,
-                        [[maybe_unused]] Context *c2d) {
-  return qjs::Value::GetUndefined();
+namespace {
+
+void EnsureStyleClassRegistered(qjs::Context &ctx) {
+  auto class_id = qjs::Runtime::GetInstance().ClassId<Style>();
+  JSRuntime *rt = JS_GetRuntime(ctx.cobj());
+  if (!JS_IsRegisteredClass(rt, class_id)) {
+    JSClassDef def{};
+    def.class_name = "CanvasStyle";
+    def.finalizer = [](JSRuntime *, JSValue val) {
+      auto rt_inst = qjs::Runtime::GetInstance();
+      if (auto *ptr = rt_inst.GetOpaque<Style>(qjs::Value(val))) {
+        ptr->~Style();
+        qjs::Runtime::Dtor<Style>(ptr);
+      }
+    };
+    qjs::Runtime::GetInstance().Register<Style>(def);
+  }
+}
+
+JSValue AddColorStop(JSContext *js_ctx, JSValueConst this_val, int argc,
+                     JSValueConst *argv) {
+  if (argc < 2) {
+    throw qjs::Exception();
+  }
+  qjs::Context ctx(js_ctx);
+  auto *style = ctx.GetOpaque<Style>(qjs::Value(this_val));
+  double offset = qjs::Value(argv[0]).Get<double>(ctx);
+  auto color_str = qjs::Value(argv[1]).Get<std::string>(ctx);
+  auto color = Color::FromString(color_str);
+  if (auto *grad = std::get_if<BLGradient>(&style->value)) {
+    grad->add_stop(offset,
+                   BLRgba(color.r, color.g, color.b, color.a).to_rgba32());
+  }
+  return qjs::Value::GetUndefined().cobj();
+}
+
+qjs::Value CreateStyleObject(qjs::Context &ctx, Style style) {
+  EnsureStyleClassRegistered(ctx);
+  bool is_gradient = std::holds_alternative<BLGradient>(style.value);
+  auto ptr = qjs::Runtime::GetInstance().Ctor<Style>(std::move(style));
+  auto obj = ctx.CreateOpaque<Style>(std::move(ptr), qjs::Value::GetNull());
+  if (is_gradient) {
+    JSValue fn = JS_NewCFunction(ctx.cobj(), AddColorStop, "addColorStop", 2);
+    JS_SetPropertyStr(ctx.cobj(), obj.cobj(), "addColorStop", fn);
+  }
+  return obj;
+}
+
+qjs::Value StyleToJSValue(qjs::Context &ctx, const Style &style) {
+  if (const auto *color = std::get_if<Color>(&style.value)) {
+    BLRgba rgba(color->r, color->g, color->b, color->a);
+    BLRgba32 rgba32 = rgba.to_rgba32();
+    char buf[64];
+    if (rgba32.a() == 255) {
+      std::snprintf(buf, sizeof(buf), "#%02x%02x%02x", rgba32.r(), rgba32.g(),
+                    rgba32.b());
+    } else {
+      std::snprintf(buf, sizeof(buf), "rgba(%u, %u, %u, %g)", rgba32.r(),
+                    rgba32.g(), rgba32.b(), static_cast<double>(rgba.a));
+    }
+    return ctx.Get(buf);
+  }
+  return CreateStyleObject(ctx, style);
+}
+
+} // namespace
+
+qjs::Value GetFillStyle(qjs::Context &ctx, Context *c2d) {
+  return StyleToJSValue(ctx, c2d->GetFillStyle());
 }
 
 void SetFillStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
@@ -19,17 +86,18 @@ void SetFillStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
     c2d->SetFillStyle(color);
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
-    [[maybe_unused]] auto pattern =
-        value.Get<std::unordered_map<std::string, qjs::Value>>(ctx);
+    EnsureStyleClassRegistered(ctx);
+    if (auto *style = qjs::Runtime::GetInstance().GetOpaque<Style>(value)) {
+      c2d->SetFillStyle(*style);
+    }
     JS_DupValue(ctx.cobj(), value.cobj());
   } else {
     JS_DupValue(ctx.cobj(), value.cobj());
   }
 }
 
-qjs::Value GetStrokeStyle([[maybe_unused]] qjs::Context &ctx,
-                          [[maybe_unused]] Context *c2d) {
-  return qjs::Value::GetUndefined();
+qjs::Value GetStrokeStyle(qjs::Context &ctx, Context *c2d) {
+  return StyleToJSValue(ctx, c2d->GetStrokeStyle());
 }
 
 void SetStrokeStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
@@ -39,12 +107,84 @@ void SetStrokeStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
     c2d->SetStrokeStyle(color);
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
-    [[maybe_unused]] auto pattern =
-        value.Get<std::unordered_map<std::string, qjs::Value>>(ctx);
+    EnsureStyleClassRegistered(ctx);
+    if (auto *style = qjs::Runtime::GetInstance().GetOpaque<Style>(value)) {
+      c2d->SetStrokeStyle(*style);
+    }
     JS_DupValue(ctx.cobj(), value.cobj());
   } else {
     JS_DupValue(ctx.cobj(), value.cobj());
   }
+}
+
+qjs::Value GetLineWidth(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetLineWidth());
+}
+
+void SetLineWidth(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  c2d->SetLineWidth(value.Get<double>(ctx));
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetLineCap(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetLineCap());
+}
+
+void SetLineCap(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetLineCap(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetLineJoin(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetLineJoin());
+}
+
+void SetLineJoin(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetLineJoin(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetMiterLimit(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetMiterLimit());
+}
+
+void SetMiterLimit(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  c2d->SetMiterLimit(value.Get<double>(ctx));
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetLineDashOffset(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetLineDashOffset());
+}
+
+void SetLineDashOffset(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  c2d->SetLineDashOffset(value.Get<double>(ctx));
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetGlobalAlpha(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetGlobalAlpha());
+}
+
+void SetGlobalAlpha(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  c2d->SetGlobalAlpha(value.Get<double>(ctx));
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetGlobalCompositeOperation());
+}
+
+void SetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d,
+                                 qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetGlobalCompositeOperation(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
@@ -136,25 +276,56 @@ qjs::Value SetTransform(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   return qjs::Value::GetUndefined();
 }
 
-qjs::Value CreateLinearGradient([[maybe_unused]] qjs::Context &ctx,
-                                [[maybe_unused]] Context *c2d,
-                                [[maybe_unused]] qjs::ValueIter first,
-                                [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+qjs::Value CreateLinearGradient(qjs::Context &ctx, Context *c2d,
+                                qjs::ValueIter first, qjs::ValueIter last) {
+  auto x0 = first++->Get<double>(ctx);
+  auto y0 = first++->Get<double>(ctx);
+  auto x1 = first++->Get<double>(ctx);
+  auto y1 = first++->Get<double>(ctx);
+
+  if (first != last)
+    throw qjs::Exception();
+
+  return CreateStyleObject(ctx, c2d->CreateLinearGradient(x0, y0, x1, y1));
 }
 
-qjs::Value CreateRadialGradient([[maybe_unused]] qjs::Context &ctx,
-                                [[maybe_unused]] Context *c2d,
-                                [[maybe_unused]] qjs::ValueIter first,
-                                [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+qjs::Value CreateRadialGradient(qjs::Context &ctx, Context *c2d,
+                                qjs::ValueIter first, qjs::ValueIter last) {
+  auto x0 = first++->Get<double>(ctx);
+  auto y0 = first++->Get<double>(ctx);
+  auto r0 = first++->Get<double>(ctx);
+  auto x1 = first++->Get<double>(ctx);
+  auto y1 = first++->Get<double>(ctx);
+  auto r1 = first++->Get<double>(ctx);
+
+  if (first != last)
+    throw qjs::Exception();
+
+  return CreateStyleObject(ctx,
+                           c2d->CreateRadialGradient(x0, y0, r0, x1, y1, r1));
 }
 
-qjs::Value CreatePattern([[maybe_unused]] qjs::Context &ctx,
-                         [[maybe_unused]] Context *c2d,
-                         [[maybe_unused]] qjs::ValueIter first,
-                         [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+qjs::Value CreatePattern(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                         qjs::ValueIter last) {
+  if (first == last)
+    throw qjs::Exception();
+
+  auto *image = ctx.GetOpaque<Canvas>(*first++);
+  std::string repetition = "repeat";
+  if (first != last) {
+    if (!first->IsUndefined() && !first->InstanceOf<std::nullptr_t>()) {
+      repetition = first->Get<std::string>(ctx);
+      if (repetition.empty()) {
+        repetition = "repeat";
+      }
+    }
+    ++first;
+  }
+
+  if (first != last)
+    throw qjs::Exception();
+
+  return CreateStyleObject(ctx, c2d->CreatePattern(*image, repetition));
 }
 
 qjs::Value ClearRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
@@ -287,12 +458,21 @@ qjs::Value BezierCurveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   return qjs::Value::GetUndefined();
 }
 
-qjs::Value ArcTo([[maybe_unused]] qjs::Context &ctx,
-                 [[maybe_unused]] Context *c2d,
-                 [[maybe_unused]] qjs::ValueIter first,
-                 [[maybe_unused]] qjs::ValueIter last) {
+qjs::Value ArcTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                 qjs::ValueIter last) {
   std::cerr << "arcTo\n";
-  throw qjs::Exception();
+
+  auto x1 = first++->Get<double>(ctx);
+  auto y1 = first++->Get<double>(ctx);
+  auto x2 = first++->Get<double>(ctx);
+  auto y2 = first++->Get<double>(ctx);
+  auto radius = first++->Get<double>(ctx);
+
+  if (first != last)
+    throw qjs::Exception();
+
+  c2d->ArcTo(x1, y1, x2, y2, radius);
+  return qjs::Value::GetUndefined();
 }
 
 qjs::Value Rect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
@@ -311,12 +491,26 @@ qjs::Value Rect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   return qjs::Value::GetUndefined();
 }
 
-qjs::Value Arc([[maybe_unused]] qjs::Context &ctx,
-               [[maybe_unused]] Context *c2d,
-               [[maybe_unused]] qjs::ValueIter first,
-               [[maybe_unused]] qjs::ValueIter last) {
+qjs::Value Arc(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+               qjs::ValueIter last) {
   std::cerr << "arc\n";
-  throw qjs::Exception();
+
+  auto x = first++->Get<double>(ctx);
+  auto y = first++->Get<double>(ctx);
+  auto radius = first++->Get<double>(ctx);
+  auto start_angle = first++->Get<double>(ctx);
+  auto end_angle = first++->Get<double>(ctx);
+  bool anticlockwise = false;
+
+  if (first != last) {
+    anticlockwise = first++->Get<bool>(ctx);
+  }
+
+  if (first != last)
+    throw qjs::Exception();
+
+  c2d->Arc(x, y, radius, start_angle, end_angle, anticlockwise);
+  return qjs::Value::GetUndefined();
 }
 
 qjs::Value Fill(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
@@ -387,13 +581,14 @@ qjs::Value IsPointInPath(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   if (first != last)
     throw qjs::Exception();
 
+  bool res = false;
   if (fill_rule) {
-    c2d->IsPointInPath(x, y, fill_rule.value());
+    res = c2d->IsPointInPath(x, y, fill_rule.value());
   } else {
-    c2d->IsPointInPath(x, y);
+    res = c2d->IsPointInPath(x, y);
   }
 
-  return qjs::Value::GetUndefined();
+  return ctx.Get(res);
 }
 
 qjs::Value FillText([[maybe_unused]] qjs::Context &ctx,
@@ -438,11 +633,51 @@ qjs::Value PutImageData([[maybe_unused]] qjs::Context &ctx,
                         [[maybe_unused]] qjs::ValueIter last) {
   throw qjs::Exception();
 }
-qjs::Value SetLineDash([[maybe_unused]] qjs::Context &ctx,
-                       [[maybe_unused]] Context *c2d,
-                       [[maybe_unused]] qjs::ValueIter first,
-                       [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+qjs::Value SetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                       qjs::ValueIter last) {
+  if (first == last)
+    throw qjs::Exception();
+
+  auto arr = *first++;
+  if (first != last)
+    throw qjs::Exception();
+
+  if (!JS_IsArray(ctx.cobj(), arr.cobj()))
+    throw qjs::Exception();
+
+  JSValue len_val = JS_GetPropertyStr(ctx.cobj(), arr.cobj(), "length");
+  uint32_t len = 0;
+  JS_ToUint32(ctx.cobj(), &len, len_val);
+  JS_FreeValue(ctx.cobj(), len_val);
+
+  std::vector<double> segments;
+  segments.reserve(len);
+  for (uint32_t i = 0; i < len; ++i) {
+    JSValue elem = JS_GetPropertyUint32(ctx.cobj(), arr.cobj(), i);
+    double val = 0.0;
+    int err = JS_ToFloat64(ctx.cobj(), &val, elem);
+    JS_FreeValue(ctx.cobj(), elem);
+    if (err != 0)
+      throw qjs::Exception();
+    segments.push_back(val);
+  }
+
+  c2d->SetLineDash(segments);
+  return qjs::Value::GetUndefined();
+}
+
+qjs::Value GetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                       qjs::ValueIter last) {
+  if (first != last)
+    throw qjs::Exception();
+
+  auto segments = c2d->GetLineDash();
+  JSValue arr = JS_NewArray(ctx.cobj());
+  for (uint32_t i = 0; i < segments.size(); ++i) {
+    JS_SetPropertyUint32(ctx.cobj(), arr, i,
+                         JS_NewFloat64(ctx.cobj(), segments[i]));
+  }
+  return qjs::Value(arr);
 }
 
 qjs::Value CreateCanvas(qjs::Context &ctx,

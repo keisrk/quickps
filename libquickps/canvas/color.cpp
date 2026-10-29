@@ -53,12 +53,16 @@ Color Color::FromString(const std::string &str) {
   std::smatch match_result;
 
   if (std::regex_match(str, match_result, kHex)) {
-    auto hex = std::stoul(match_result[1]);
+    auto hex = std::stoul(match_result[1], nullptr, 16);
 
     if (match_result[1].length() == 6) {
-      return Color::Create(hex);
+      return Color::Create((hex << 8) | 0xff);
     } else {
-      return Color::Create(hex << 8 | 0xff);
+      uint32_t r = (hex >> 8) & 0xf;
+      uint32_t g = (hex >> 4) & 0xf;
+      uint32_t b = hex & 0xf;
+      return Color::Create((r * 0x11 << 24) | (g * 0x11 << 16) |
+                           (b * 0x11 << 8) | 0xff);
     }
   } else if (std::regex_match(str, match_result, kRgba)) {
     auto r = std::stof(match_result[1]) / 255;

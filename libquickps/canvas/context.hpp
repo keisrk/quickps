@@ -17,6 +17,7 @@ namespace quickps {
 namespace canvas {
 
 class Unimplemented : public std::exception {};
+class Canvas;
 
 class Context final {
 public:
@@ -33,6 +34,7 @@ public:
   Style CreateRadialGradient(double x0, double y0, double r0, double x1,
                              double y1, double r1);
   Style CreatePattern(double image, int repetition);
+  Style CreatePattern(Canvas &image, const std::string &repetition);
   void ClearRect(double x, double y, double w, double h);
   void FillRect(double x, double y, double w, double h);
   void StrokeRect(double x, double y, double w, double h);
@@ -47,6 +49,8 @@ public:
   void Rect(double x, double y, double w, double h);
   void Arc(double x, double y, double radius, double startAngle,
            double endAngle, double anticlockwise);
+  void Arc(double x, double y, double radius, double startAngle,
+           double endAngle, bool anticlockwise = false);
   void Fill();
   void Fill(const std::string &fill_rule);
   void Stroke();
@@ -67,6 +71,22 @@ public:
   void PutImageData(double imagedata, double dx, double dy, double dirtyX,
                     double dirtyY, double dirtyWidth, double dirtyHeight);
   void SetLineDash(double array);
+  void SetLineDash(const std::vector<double> &segments);
+  std::vector<double> GetLineDash() const;
+  double GetLineDashOffset() const;
+  void SetLineDashOffset(double offset);
+  double GetLineWidth() const;
+  void SetLineWidth(double width);
+  std::string GetLineCap() const;
+  void SetLineCap(const std::string &cap);
+  std::string GetLineJoin() const;
+  void SetLineJoin(const std::string &join);
+  double GetMiterLimit() const;
+  void SetMiterLimit(double limit);
+  double GetGlobalAlpha() const;
+  void SetGlobalAlpha(double alpha);
+  std::string GetGlobalCompositeOperation() const;
+  void SetGlobalCompositeOperation(const std::string &op);
   Style GetFillStyle();
   void SetFillStyle(const Style &);
   void SetFillStyle(const Color &);

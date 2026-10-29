@@ -13,6 +13,23 @@ qjs::Value GetFillStyle(qjs::Context &ctx, Context *c2d);
 void SetFillStyle(qjs::Context &, Context *c2d, qjs::Value value);
 qjs::Value GetStrokeStyle(qjs::Context &ctx, Context *c2d);
 void SetStrokeStyle(qjs::Context &, Context *c2d, qjs::Value value);
+qjs::Value GetLineWidth(qjs::Context &ctx, Context *c2d);
+void SetLineWidth(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetLineCap(qjs::Context &ctx, Context *c2d);
+void SetLineCap(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetLineJoin(qjs::Context &ctx, Context *c2d);
+void SetLineJoin(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetMiterLimit(qjs::Context &ctx, Context *c2d);
+void SetMiterLimit(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetLineDashOffset(qjs::Context &ctx, Context *c2d);
+void SetLineDashOffset(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetGlobalAlpha(qjs::Context &ctx, Context *c2d);
+void SetGlobalAlpha(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d);
+void SetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d,
+                                 qjs::Value value);
+qjs::Value GetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                       qjs::ValueIter last);
 qjs::Value Save(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last);
 qjs::Value Restore(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,

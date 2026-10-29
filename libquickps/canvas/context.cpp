@@ -1,4 +1,7 @@
+#include <algorithm>
+#include <cmath>
 #include <libquickps/canvas/facade.hpp>
+#include <numbers>
 #include <utility>
 
 namespace quickps {
@@ -8,6 +11,19 @@ namespace {
 
 BLFillRule ParseFillRule(const std::string &fill_rule) {
   return "evenodd" == fill_rule ? BL_FILL_RULE_EVEN_ODD : BL_FILL_RULE_NON_ZERO;
+}
+
+BLExtendMode ParseExtendMode(const std::string &repetition) {
+  if (repetition == "no-repeat") {
+    return BL_EXTEND_MODE_PAD;
+  }
+  if (repetition == "repeat-x") {
+    return BL_EXTEND_MODE_REPEAT_X_PAD_Y;
+  }
+  if (repetition == "repeat-y") {
+    return BL_EXTEND_MODE_PAD_X_REPEAT_Y;
+  }
+  return BL_EXTEND_MODE_REPEAT;
 }
 
 template <typename DrawFn>
@@ -49,13 +65,17 @@ void DrawWithClipMask(BLContext &ctx, const std::optional<BLImage> &clip_mask,
 
   ctx.save();
   ctx.reset_transform();
+  ctx.set_global_alpha(1.0);
   ctx.blit_image(BLPointI(0, 0), layer);
   ctx.restore();
 }
 
 } // namespace
 
-Context::Context(BLContext ctx) : context_(std::move(ctx)) {}
+Context::Context(BLContext ctx) : context_(std::move(ctx)) {
+  Impl().set_fill_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+  Impl().set_stroke_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+}
 
 BLContext &Context::Impl() { return context_; }
 
@@ -87,25 +107,26 @@ void Context::SetTransform(double a, double b, double c, double d, double e,
   Impl().set_transform(m);
 }
 
-Style Context::CreateLinearGradient([[maybe_unused]] double x0,
-                                    [[maybe_unused]] double y0,
-                                    [[maybe_unused]] double x1,
-                                    [[maybe_unused]] double y1) {
-  throw Unimplemented();
+Style Context::CreateLinearGradient(double x0, double y0, double x1,
+                                    double y1) {
+  return Style::FromGradient(
+      BLGradient(BLLinearGradientValues(x0, y0, x1, y1)));
 }
 
-Style Context::CreateRadialGradient([[maybe_unused]] double x0,
-                                    [[maybe_unused]] double y0,
-                                    [[maybe_unused]] double r0,
-                                    [[maybe_unused]] double x1,
-                                    [[maybe_unused]] double y1,
-                                    [[maybe_unused]] double r1) {
-  throw Unimplemented();
+Style Context::CreateRadialGradient(double x0, double y0, double r0, double x1,
+                                    double y1, double r1) {
+  return Style::FromGradient(
+      BLGradient(BLRadialGradientValues(x1, y1, x0, y0, r1, r0)));
 }
 
 Style Context::CreatePattern([[maybe_unused]] double image,
                              [[maybe_unused]] int repetition) {
   throw Unimplemented();
+}
+
+Style Context::CreatePattern(Canvas &image, const std::string &repetition) {
+  return Style::FromPattern(
+      BLPattern(image.Impl(), ParseExtendMode(repetition)));
 }
 
 void Context::ClearRect(double x, double y, double width, double height) {
@@ -168,22 +189,120 @@ void Context::BezierCurveTo(double cp1x, double cp1y, double cp2x, double cp2y,
   path_.cubic_to(cp1x, cp1y, cp2x, cp2y, x, y);
 }
 
-void Context::ArcTo([[maybe_unused]] double x1, [[maybe_unused]] double y1,
-                    [[maybe_unused]] double x2, [[maybe_unused]] double y2,
-                    [[maybe_unused]] double radius) {
-  throw Unimplemented();
+void Context::ArcTo(double x1, double y1, double x2, double y2, double radius) {
+  if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) ||
+      !std::isfinite(y2) || !std::isfinite(radius)) {
+    return;
+  }
+  if (radius < 0.0) {
+    throw quickjs::Exception();
+  }
+
+  BLPoint p0;
+  if (path_.get_last_vertex(&p0) != BL_SUCCESS) {
+    path_.move_to(x1, y1);
+    return;
+  }
+
+  const double dx0 = p0.x - x1;
+  const double dy0 = p0.y - y1;
+  const double len0 = std::hypot(dx0, dy0);
+
+  const double dx1 = x2 - x1;
+  const double dy1 = y2 - y1;
+  const double len1 = std::hypot(dx1, dy1);
+
+  if (len0 < 1e-9 || len1 < 1e-9 || radius == 0.0) {
+    path_.line_to(x1, y1);
+    return;
+  }
+
+  const double ux0 = dx0 / len0;
+  const double uy0 = dy0 / len0;
+  const double ux1 = dx1 / len1;
+  const double uy1 = dy1 / len1;
+
+  const double cross = ux0 * uy1 - uy0 * ux1;
+  if (std::fabs(cross) < 1e-9) {
+    path_.line_to(x1, y1);
+    return;
+  }
+
+  const double dot = std::clamp(ux0 * ux1 + uy0 * uy1, -1.0, 1.0);
+  const double half_angle = 0.5 * std::acos(dot);
+  const double tan_half = std::tan(half_angle);
+  if (std::fabs(tan_half) < 1e-9) {
+    path_.line_to(x1, y1);
+    return;
+  }
+
+  const double dist = radius / tan_half;
+  const double t0x = x1 + ux0 * dist;
+  const double t0y = y1 + uy0 * dist;
+  const double t1x = x1 + ux1 * dist;
+  const double t1y = y1 + uy1 * dist;
+
+  // Normal from t0 toward center depends on turn direction
+  const double sign = cross < 0.0 ? 1.0 : -1.0;
+  const double cx = t0x + sign * (-uy0) * radius;
+  const double cy = t0y + sign * ux0 * radius;
+
+  const double start_angle = std::atan2(t0y - cy, t0x - cx);
+  const double end_angle = std::atan2(t1y - cy, t1x - cx);
+  double sweep = end_angle - start_angle;
+  if (cross < 0.0) {
+    if (sweep < 0.0) {
+      sweep += 2.0 * std::numbers::pi;
+    }
+  } else {
+    if (sweep > 0.0) {
+      sweep -= 2.0 * std::numbers::pi;
+    }
+  }
+
+  path_.arc_to(cx, cy, radius, radius, start_angle, sweep, false);
 }
 
 void Context::Rect(double x, double y, double width, double height) {
   path_.add_rect(x, y, width, height);
 }
 
-void Context::Arc([[maybe_unused]] double x, [[maybe_unused]] double y,
-                  [[maybe_unused]] double radius,
-                  [[maybe_unused]] double startAngle,
-                  [[maybe_unused]] double endAngle,
-                  [[maybe_unused]] double anticlockwise) {
-  throw Unimplemented();
+void Context::Arc(double x, double y, double radius, double startAngle,
+                  double endAngle, double anticlockwise) {
+  Arc(x, y, radius, startAngle, endAngle, anticlockwise != 0.0);
+}
+
+void Context::Arc(double x, double y, double radius, double startAngle,
+                  double endAngle, bool anticlockwise) {
+  if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(radius) ||
+      !std::isfinite(startAngle) || !std::isfinite(endAngle)) {
+    return;
+  }
+  if (radius < 0.0) {
+    throw quickjs::Exception();
+  }
+
+  constexpr double kTwoPi = 2.0 * std::numbers::pi;
+  double sweep = endAngle - startAngle;
+  if (!anticlockwise) {
+    if (sweep >= kTwoPi) {
+      sweep = kTwoPi;
+    } else {
+      while (sweep < 0.0) {
+        sweep += kTwoPi;
+      }
+    }
+  } else {
+    if (sweep <= -kTwoPi) {
+      sweep = -kTwoPi;
+    } else {
+      while (sweep > 0.0) {
+        sweep -= kTwoPi;
+      }
+    }
+  }
+
+  path_.arc_to(x, y, radius, radius, startAngle, sweep, false);
 }
 
 void Context::Fill() {
@@ -234,8 +353,66 @@ bool Context::IsPointInPath(double x, double y, const std::string &fill_rule) {
   return IsPointInPath(x, y);
 }
 
+Style Context::GetFillStyle() {
+  BLVar var;
+  Impl().get_fill_style(var);
+  if (var.type() == BL_OBJECT_TYPE_GRADIENT) {
+    return Style::FromGradient(var.as<BLGradient>());
+  }
+  if (var.type() == BL_OBJECT_TYPE_PATTERN) {
+    return Style::FromPattern(var.as<BLPattern>());
+  }
+  BLRgba rgba{};
+  if (bl_var_to_rgba(&var, &rgba) == BL_SUCCESS) {
+    return Style::FromColor(Color(rgba.r, rgba.g, rgba.b, rgba.a));
+  }
+  return Style::FromColor(Color(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+void Context::SetFillStyle(const Style &style) {
+  std::visit(
+      [this](const auto &s) {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, Color>) {
+          SetFillStyle(s);
+        } else {
+          Impl().set_fill_style(s);
+        }
+      },
+      style.value);
+}
+
 void Context::SetFillStyle(const Color &color) {
   Impl().set_fill_style(BLRgba(color.r, color.g, color.b, color.a));
+}
+
+Style Context::GetStrokeStyle() {
+  BLVar var;
+  Impl().get_stroke_style(var);
+  if (var.type() == BL_OBJECT_TYPE_GRADIENT) {
+    return Style::FromGradient(var.as<BLGradient>());
+  }
+  if (var.type() == BL_OBJECT_TYPE_PATTERN) {
+    return Style::FromPattern(var.as<BLPattern>());
+  }
+  BLRgba rgba{};
+  if (bl_var_to_rgba(&var, &rgba) == BL_SUCCESS) {
+    return Style::FromColor(Color(rgba.r, rgba.g, rgba.b, rgba.a));
+  }
+  return Style::FromColor(Color(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+void Context::SetStrokeStyle(const Style &style) {
+  std::visit(
+      [this](const auto &s) {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, Color>) {
+          SetStrokeStyle(s);
+        } else {
+          Impl().set_stroke_style(s);
+        }
+      },
+      style.value);
 }
 
 void Context::SetStrokeStyle(const Color &color) {
@@ -281,6 +458,194 @@ void Context::PutImageData([[maybe_unused]] double imagedata,
                            [[maybe_unused]] double dirtyWidth,
                            [[maybe_unused]] double dirtyHeight) {}
 void Context::SetLineDash([[maybe_unused]] double array) {}
+
+void Context::SetLineDash(const std::vector<double> &segments) {
+  for (double v : segments) {
+    if (!std::isfinite(v) || v < 0.0) {
+      return;
+    }
+  }
+  BLArray<double> dash;
+  if (segments.size() % 2 == 1) {
+    dash.reserve(segments.size() * 2);
+    dash.append_data(segments.data(), segments.size());
+    dash.append_data(segments.data(), segments.size());
+  } else {
+    dash.assign_data(segments.data(), segments.size());
+  }
+  Impl().set_stroke_dash_array(dash);
+}
+
+std::vector<double> Context::GetLineDash() const {
+  const auto &dash = context_.stroke_dash_array();
+  return std::vector<double>(dash.data(), dash.data() + dash.size());
+}
+
+double Context::GetLineDashOffset() const {
+  return context_.stroke_dash_offset();
+}
+
+void Context::SetLineDashOffset(double offset) {
+  if (std::isfinite(offset)) {
+    Impl().set_stroke_dash_offset(offset);
+  }
+}
+
+double Context::GetLineWidth() const { return context_.stroke_width(); }
+
+void Context::SetLineWidth(double width) {
+  if (std::isfinite(width) && width > 0.0) {
+    lineWidth = width;
+    Impl().set_stroke_width(width);
+  }
+}
+
+std::string Context::GetLineCap() const {
+  switch (context_.stroke_start_cap()) {
+  case BL_STROKE_CAP_ROUND:
+    return "round";
+  case BL_STROKE_CAP_SQUARE:
+    return "square";
+  default:
+    return "butt";
+  }
+}
+
+void Context::SetLineCap(const std::string &cap) {
+  if (cap == "butt") {
+    lineCap = cap;
+    Impl().set_stroke_caps(BL_STROKE_CAP_BUTT);
+  } else if (cap == "round") {
+    lineCap = cap;
+    Impl().set_stroke_caps(BL_STROKE_CAP_ROUND);
+  } else if (cap == "square") {
+    lineCap = cap;
+    Impl().set_stroke_caps(BL_STROKE_CAP_SQUARE);
+  }
+}
+
+std::string Context::GetLineJoin() const {
+  switch (context_.stroke_join()) {
+  case BL_STROKE_JOIN_ROUND:
+    return "round";
+  case BL_STROKE_JOIN_BEVEL:
+    return "bevel";
+  default:
+    return "miter";
+  }
+}
+
+void Context::SetLineJoin(const std::string &join) {
+  if (join == "round") {
+    lineJoin = join;
+    Impl().set_stroke_join(BL_STROKE_JOIN_ROUND);
+  } else if (join == "bevel") {
+    lineJoin = join;
+    Impl().set_stroke_join(BL_STROKE_JOIN_BEVEL);
+  } else if (join == "miter") {
+    lineJoin = join;
+    Impl().set_stroke_join(BL_STROKE_JOIN_MITER_CLIP);
+  }
+}
+
+double Context::GetMiterLimit() const { return context_.stroke_miter_limit(); }
+
+void Context::SetMiterLimit(double limit) {
+  if (std::isfinite(limit) && limit > 0.0) {
+    miterLimit = limit;
+    Impl().set_stroke_miter_limit(limit);
+  }
+}
+
+double Context::GetGlobalAlpha() const { return context_.global_alpha(); }
+
+void Context::SetGlobalAlpha(double alpha) {
+  if (std::isfinite(alpha) && alpha >= 0.0 && alpha <= 1.0) {
+    globalAlpha = alpha;
+    Impl().set_global_alpha(alpha);
+  }
+}
+
+std::string Context::GetGlobalCompositeOperation() const {
+  switch (context_.comp_op()) {
+  case BL_COMP_OP_SRC_OVER:
+    return "source-over";
+  case BL_COMP_OP_SRC_IN:
+    return "source-in";
+  case BL_COMP_OP_SRC_OUT:
+    return "source-out";
+  case BL_COMP_OP_SRC_ATOP:
+    return "source-atop";
+  case BL_COMP_OP_DST_OVER:
+    return "destination-over";
+  case BL_COMP_OP_DST_IN:
+    return "destination-in";
+  case BL_COMP_OP_DST_OUT:
+    return "destination-out";
+  case BL_COMP_OP_DST_ATOP:
+    return "destination-atop";
+  case BL_COMP_OP_PLUS:
+    return "lighter";
+  case BL_COMP_OP_SRC_COPY:
+    return "copy";
+  case BL_COMP_OP_XOR:
+    return "xor";
+  case BL_COMP_OP_MULTIPLY:
+    return "multiply";
+  case BL_COMP_OP_SCREEN:
+    return "screen";
+  case BL_COMP_OP_OVERLAY:
+    return "overlay";
+  case BL_COMP_OP_DARKEN:
+    return "darken";
+  case BL_COMP_OP_LIGHTEN:
+    return "lighten";
+  case BL_COMP_OP_COLOR_DODGE:
+    return "color-dodge";
+  case BL_COMP_OP_COLOR_BURN:
+    return "color-burn";
+  case BL_COMP_OP_HARD_LIGHT:
+    return "hard-light";
+  case BL_COMP_OP_SOFT_LIGHT:
+    return "soft-light";
+  case BL_COMP_OP_DIFFERENCE:
+    return "difference";
+  case BL_COMP_OP_EXCLUSION:
+    return "exclusion";
+  default:
+    return "source-over";
+  }
+}
+
+void Context::SetGlobalCompositeOperation(const std::string &op) {
+  static const std::unordered_map<std::string, BLCompOp> kCompOps = {
+      {"source-over", BL_COMP_OP_SRC_OVER},
+      {"source-in", BL_COMP_OP_SRC_IN},
+      {"source-out", BL_COMP_OP_SRC_OUT},
+      {"source-atop", BL_COMP_OP_SRC_ATOP},
+      {"destination-over", BL_COMP_OP_DST_OVER},
+      {"destination-in", BL_COMP_OP_DST_IN},
+      {"destination-out", BL_COMP_OP_DST_OUT},
+      {"destination-atop", BL_COMP_OP_DST_ATOP},
+      {"lighter", BL_COMP_OP_PLUS},
+      {"copy", BL_COMP_OP_SRC_COPY},
+      {"xor", BL_COMP_OP_XOR},
+      {"multiply", BL_COMP_OP_MULTIPLY},
+      {"screen", BL_COMP_OP_SCREEN},
+      {"overlay", BL_COMP_OP_OVERLAY},
+      {"darken", BL_COMP_OP_DARKEN},
+      {"lighten", BL_COMP_OP_LIGHTEN},
+      {"color-dodge", BL_COMP_OP_COLOR_DODGE},
+      {"color-burn", BL_COMP_OP_COLOR_BURN},
+      {"hard-light", BL_COMP_OP_HARD_LIGHT},
+      {"soft-light", BL_COMP_OP_SOFT_LIGHT},
+      {"difference", BL_COMP_OP_DIFFERENCE},
+      {"exclusion", BL_COMP_OP_EXCLUSION},
+  };
+  if (auto it = kCompOps.find(op); it != kCompOps.end()) {
+    Impl().set_comp_op(it->second);
+  }
+}
 
 Canvas::Canvas(int width, int height)
     : surface_(width, height, BL_FORMAT_PRGB32) {
@@ -328,6 +693,49 @@ template <> const Class &GetClass<canvas::Context>() {
                      .Name("strokeStyle")
                      .Getter<GetStrokeStyle>()
                      .Setter<SetStrokeStyle>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("lineWidth")
+                     .Getter<GetLineWidth>()
+                     .Setter<SetLineWidth>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("lineCap")
+                     .Getter<GetLineCap>()
+                     .Setter<SetLineCap>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("lineJoin")
+                     .Getter<GetLineJoin>()
+                     .Setter<SetLineJoin>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("miterLimit")
+                     .Getter<GetMiterLimit>()
+                     .Setter<SetMiterLimit>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("lineDashOffset")
+                     .Getter<GetLineDashOffset>()
+                     .Setter<SetLineDashOffset>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("globalAlpha")
+                     .Getter<GetGlobalAlpha>()
+                     .Setter<SetGlobalAlpha>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("globalCompositeOperation")
+                     .Getter<GetGlobalCompositeOperation>()
+                     .Setter<SetGlobalCompositeOperation>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("setLineDash")
+                     .Method<SetLineDash>(1)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("getLineDash")
+                     .Method<GetLineDash>(0)
                      .Build())
           .Proto(EntryBuilder<canvas::Context>()
                      .Name("save")

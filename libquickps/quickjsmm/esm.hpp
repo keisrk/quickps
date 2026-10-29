@@ -1,6 +1,7 @@
 #ifndef QUICKPS_QUICKJSMM_ESM_H_
 #define QUICKPS_QUICKJSMM_ESM_H_
 
+#include <cstddef>
 #include <libquickps/quickjsmm/context.hpp>
 #include <type_traits>
 #include <vector>
@@ -26,7 +27,7 @@ template <class C>
 using MethodFun = typename std::add_pointer<Value(
     Context &ctx, C *instance, ValueIter first, ValueIter last)>::type;
 
-template <class C = nullptr_t> class EntryBuilder final {
+template <class C = std::nullptr_t> class EntryBuilder final {
 public:
   constexpr EntryBuilder() : entry_() {}
 
@@ -46,7 +47,7 @@ public:
   }
 
   template <Fun F> EntryBuilder &Func(size_t argc) {
-    static_assert(std::is_same<C, nullptr_t>::value);
+    static_assert(std::is_same<C, std::nullptr_t>::value);
     Descriptor(JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     DefType(JS_DEF_CFUNC);
 
@@ -69,7 +70,7 @@ public:
   Entry Build() { return Entry(entry_); }
 
   template <Get<C> G> EntryBuilder &Getter() {
-    static_assert(!std::is_same<C, nullptr_t>::value);
+    static_assert(!std::is_same<C, std::nullptr_t>::value);
     Descriptor(JS_PROP_CONFIGURABLE);
     DefType(JS_DEF_CGETSET);
 
@@ -86,7 +87,7 @@ public:
   }
 
   template <Set<C> S> EntryBuilder &Setter() {
-    static_assert(!std::is_same<C, nullptr_t>::value);
+    static_assert(!std::is_same<C, std::nullptr_t>::value);
     Descriptor(JS_PROP_CONFIGURABLE);
     DefType(JS_DEF_CGETSET);
 
@@ -105,7 +106,7 @@ public:
   }
 
   template <MethodFun<C> M> EntryBuilder &Method(size_t argc) {
-    static_assert(!std::is_same<C, nullptr_t>::value);
+    static_assert(!std::is_same<C, std::nullptr_t>::value);
     Descriptor(JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     DefType(JS_DEF_CFUNC);
 

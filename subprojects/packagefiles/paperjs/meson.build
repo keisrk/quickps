@@ -1,4 +1,6 @@
-project('paperjs', 'cpp',  version : '0.16.0')
+project('paperjs', 'cpp',  version : '0.16.0',
+  default_options : ['cpp_std=c++26']
+)
 
 curl = find_program('curl')
 py_mod = import('python')

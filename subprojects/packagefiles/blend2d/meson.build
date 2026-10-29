@@ -1,5 +1,5 @@
 project('blend2d', 'cpp',
-  default_options : ['cpp_std=c++20']
+  default_options : ['cpp_std=c++26']
 )
 
 inc = include_directories('.', is_system : true)

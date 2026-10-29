@@ -1,0 +1,205 @@
+diff --git a/src/anim/Tween.js b/src/anim/Tween.js
+index 8b4d42943..83d8c1d39 100644
+--- a/src/anim/Tween.js
++++ b/src/anim/Tween.js
+@@ -406,10 +406,10 @@ var Tween = Base.extend(Emitter, /** @lends Tween# */{
+                     ? this._calculate(current, operator[0], value[1])
+                     : value;
+             } else if (typeof value === 'string') {
+-                var match = value.match(/^[+\-*/]=(.*)/);
++                var match = value.slice(0, 4096).match(/^[+\-*/]=(.*)/);
+                 if (match) {
+                     var parsed = JSON.parse(match[1].replace(
+-                        /(['"])?([a-zA-Z0-9_]+)(['"])?:/g,
++                        /(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g,
+                         '"$2": '
+                     ));
+                     return this._calculate(current, value[0], parsed);
+@@ -451,15 +451,23 @@ var Tween = Base.extend(Emitter, /** @lends Tween# */{
+     _getProperty: function(path, offset) {
+         var obj = this.object;
+         for (var i = 0, l = path.length - (offset || 0); i < l && obj; i++) {
+-            obj = obj[path[i]];
++            var key = path[i];
++            if (key === '__proto__' || key === 'prototype'
++                    || key === 'constructor')
++                return null;
++            obj = obj[key];
+         }
+         return obj;
+     },
+ 
+     _setProperty: function(path, value) {
++        var lastKey = path[path.length - 1];
++        if (lastKey === '__proto__' || lastKey === 'prototype'
++                || lastKey === 'constructor')
++            return;
+         var dest = this._getProperty(path, 1);
+         if (dest) {
+-            dest[path[path.length - 1]] = value;
++            dest[lastKey] = value;
+         }
+     }
+ });
+diff --git a/src/core/Base.js b/src/core/Base.js
+index b5ebd98c4..fe466bf5d 100644
+--- a/src/core/Base.js
++++ b/src/core/Base.js
+@@ -391,6 +391,9 @@ statics: /** @lends Base */{
+         var processed;
+ 
+         function handleKey(key) {
++            if (key === '__proto__' || key === 'prototype'
++                    || key === 'constructor')
++                return;
+             if (!(exclude && key in exclude) &&
+                 !(processed && key in processed)) {
+                 // Due to the _filtered inheritance trick, undefined is used
+@@ -537,9 +540,12 @@ statics: /** @lends Base */{
+             // First see if this is perhaps a dictionary reference, and if so
+             // return its definition instead.
+             if (json.length == 1 && /^#/.test(type)) {
+-                return _data.dictionary[type];
++                return _data.dictionary && _data.dictionary[type];
+             }
+-            type = Base.exports[type];
++            type = Object.prototype.hasOwnProperty.call(Base.exports, type)
++                    && type !== 'PaperScript'
++                    ? Base.exports[type]
++                    : null;
+             res = [];
+             // Skip first type entry for arguments.
+             // Pass true for _isRoot in children if we have a dictionary,
+diff --git a/src/core/PaperScope.js b/src/core/PaperScope.js
+index 7197f3c3c..3d2bae145 100644
+--- a/src/core/PaperScope.js
++++ b/src/core/PaperScope.js
+@@ -72,7 +72,7 @@ var PaperScope = Base.extend(/** @lends PaperScope# */{
+         }
+         if (!this.agent) {
+             // Use self.instead of window, to cover handle web-workers too.
+-            var user = self.navigator.userAgent.toLowerCase(),
++            var user = self.navigator.userAgent.toLowerCase().slice(0, 512),
+                 // Detect basic platforms, only mac internally required for now.
+                 os = (/(darwin|win|mac|linux|freebsd|sunos)/.exec(user)||[])[0],
+                 platform = os === 'darwin' ? 'mac' : os,
+@@ -86,7 +86,7 @@ var PaperScope = Base.extend(/** @lends PaperScope# */{
+             // here: { chrome: true, webkit: false }, Mozilla missing is the
+             // only difference to jQuery.browser
+             user.replace(
+-                /(opera|chrome|safari|webkit|firefox|msie|trident|atom|node|jsdom)\/?\s*([.\d]+)(?:.*version\/([.\d]+))?(?:.*rv\:v?([.\d]+))?/g,
++                /(opera|chrome|safari|webkit|firefox|msie|trident|atom|node|jsdom)\/?\s*([.\d]+)(?:[^v]*version\/([.\d]+))?(?:[^r]*rv:v?([.\d]+))?/g,
+                 function(match, n, v1, v2, rv) {
+                     // Do not set additional browsers once chrome is detected.
+                     if (!agent.chrome) {
+diff --git a/src/core/PaperScript.js b/src/core/PaperScript.js
+index 50937ea04..0358e5c6a 100644
+--- a/src/core/PaperScript.js
++++ b/src/core/PaperScript.js
+@@ -596,7 +596,8 @@ Base.exports.PaperScript = function() {
+                         + self.btoa(unescape(encodeURIComponent(
+                             JSON.stringify(map))));
+             }
+-            code += "\n//# sourceURL=" + (url || 'paperscript');
++            var safeUrl = (url ? String(url) : 'paperscript').replace(/[\r\n]+/g, '');
++            code += "\n//# sourceURL=" + safeUrl;
+         }
+         return {
+             url: url,
+@@ -683,6 +684,8 @@ Base.exports.PaperScript = function() {
+             // doesn't either, but fields set on the scope itself do, e.g. a
+             // console that a host provides:
+             for (var key in scope) {
++                if (!/^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(key))
++                    continue;
+                 // Next to \b well also need to match \s and \W in the beginning
+                 // of $__, since $ is not part of \w. And that causes \b to not
+                 // match ^ longer, so include that specifically too.
+@@ -737,7 +740,8 @@ Base.exports.PaperScript = function() {
+         var exports = Base.each(handlers, function(key) {
+             // Check for each handler explicitly and only export them if they
+             // seem to exist.
+-            if (new RegExp('\\s+' + key + '\\b').test(code)) {
++            if (/^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(key)
++                    && new RegExp('\\s+' + key + '\\b').test(code)) {
+                 params.push(key);
+                 this.push('module.exports.' + key + ' = ' + key + ';');
+             }
+diff --git a/src/svg/SvgExport.js b/src/svg/SvgExport.js
+index 22e2641e4..c3920f2b1 100644
+--- a/src/svg/SvgExport.js
++++ b/src/svg/SvgExport.js
+@@ -522,13 +522,13 @@ new function() {
+         } else if (type === 'font') {
+             // Paper.js combines the font style with the weight, while
+             // SVG keeps it in its own attribute:
+-            var font = ('' + value).match(
+-                    /^(.*?)\s*\b(italic|oblique)\b\s*(.*)$/i);
++            var fontStr = ('' + value).slice(0, 512),
++                font = fontStr.match(/\b(italic|oblique)\b/i);
+             attrs[entry.attribute] = font
+-                    ? (font[1] + ' ' + font[3]).trim() || 'normal'
++                    ? fontStr.replace(/\b(italic|oblique)\b/i, ' ').replace(/\s+/g, ' ').trim() || 'normal'
+                     : value;
+             if (font)
+-                attrs['font-style'] = font[2].toLowerCase();
++                attrs['font-style'] = font[1].toLowerCase();
+         } else {
+             attrs[entry.attribute] = value == null ? 'none'
+                     : type === 'color' ? value.gradient
+diff --git a/src/svg/SvgImport.js b/src/svg/SvgImport.js
+index 555e65fa6..7f91d87e0 100644
+--- a/src/svg/SvgImport.js
++++ b/src/svg/SvgImport.js
+@@ -19,10 +19,10 @@ new function() {
+     // objects, dealing with baseVal, and item lists.
+     // index is option, and if passed, causes a lookup in a list.
+ 
+-    var definitions = {},
++    var definitions = Object.create(null),
+         // The ids of the elements that <use> elements are importing, to skip
+         // circular references, as SVG does:
+-        used = {},
++        used = Object.create(null),
+         rootSize,
+         // The absolute units of CSS in px:
+         units = { 'in': 96, pt: 96 / 72, pc: 96 / 6, cm: 96 / 2.54,
+@@ -520,7 +520,8 @@ new function() {
+     // Reads a shadow from a single CSS drop-shadow(), with its color before or
+     // after its lengths, of which its blur radius equals the shadow blur:
+     function getCssShadow(value) {
+-        var match = value.match(/^\s*drop-shadow\((.*)\)\s*$/),
++        var trimmed = ('' + value).trim(),
++            match = trimmed.match(/^drop-shadow\(([^)]*)\)$/),
+             color = match && match[1].match(
+                     /(?:rgba?|hsla?)\([^)]*\)|#[0-9a-f]+|\b[a-z]+\b/i),
+             lengths = match && match[1].replace(color && color[0], '')
+@@ -748,10 +749,16 @@ new function() {
+     function getDefinitionById(id, options) {
+         // Definitions can be referenced before they appear in the document,
+         // so import them on demand, see #1146:
+-        if (id && !definitions[id]) {
++        if (id && !definitions[id] && !used[id]) {
+             var node = getElementById(id);
+-            if (node)
+-                importNode(node, options, false);
++            if (node) {
++                used[id] = true;
++                try {
++                    importNode(node, options, false);
++                } finally {
++                    delete used[id];
++                }
++            }
+         }
+         return definitions[id];
+     }
+@@ -916,7 +923,7 @@ new function() {
+             }
+             // Clear definitions at the end of import:
+             if (isRoot)
+-                definitions = {};
++                definitions = Object.create(null);
+         }
+         // Now if settings.applyMatrix was set, apply recursively and set
+         // #applyMatrix = true on the item and all children.

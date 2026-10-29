@@ -59,7 +59,7 @@ TBA
 ```bash
 git clone git@github.com:keisrk/quickps.git
 cd quickps
-meson setup build
+CC=clang-20 CXX=clang++-20 meson setup build
 meson compile -C build
 meson test -C build
 ```

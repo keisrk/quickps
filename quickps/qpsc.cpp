@@ -2,10 +2,16 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <sstream>
+#include <libquickps/logger.hpp>
 #include <libquickps/quickps.hpp>
 
 namespace {
 using namespace quickps;
+
+enum {
+  OPT_VERBOSE = 1000,
+};
 
 static const char *desc = R"(qpsc PaperScript compiler
 
@@ -14,13 +20,16 @@ static const char *desc = R"(qpsc PaperScript compiler
              If absent or specified as "--input -", reads from stdin.
 -o,--output  Output image file path (required). Supported file extension is .png.
 -s,--size    Geometry width and height of image. Defaults to "640x480".
+--verbose    Enable verbose debug logging.
 )";
 
-static const struct option options[] = {{"help", no_argument, 0, 'h'},
-                                        {"input", required_argument, 0, 'i'},
-                                        {"output", required_argument, 0, 'o'},
-                                        {"size", required_argument, 0, 's'},
-                                        {0, 0, 0, 0}};
+static const struct option options[] = {
+    {"help", no_argument, 0, 'h'},
+    {"input", required_argument, 0, 'i'},
+    {"output", required_argument, 0, 'o'},
+    {"size", required_argument, 0, 's'},
+    {"verbose", no_argument, 0, OPT_VERBOSE},
+    {0, 0, 0, 0}};
 
 bool Run(std::istream &input_stream, std::filesystem::path &output_path,
          int width, int height) {
@@ -42,7 +51,7 @@ bool Run(std::istream &input_stream, std::filesystem::path &output_path,
     std::cerr << qps.ctx();
     success = false;
   } catch (const std::exception &e) {
-    std::cerr << "Error: " << e.what() << "\n";
+    log::error("{}", e.what());
     success = false;
   }
 
@@ -77,6 +86,10 @@ int main(int argc, char **argv) {
         [[fallthrough]];
       }
 
+    case OPT_VERBOSE:
+      quickps::Logger::instance().set_level(quickps::LogLevel::Debug);
+      break;
+
     case 'h':
     default:
       std::cout << desc;
@@ -85,7 +98,7 @@ int main(int argc, char **argv) {
   }
 
   if (output_path.empty()) {
-    std::cerr << "Error: Output file path (-o, --output) is required.\n";
+    log::error("Output file path (-o, --output) is required.");
     return EXIT_FAILURE;
   }
 
@@ -96,7 +109,7 @@ int main(int argc, char **argv) {
   } else {
     std::ifstream input(input_path);
     if (!input.is_open()) {
-      std::cerr << "Failed to open input file: " << input_path << "\n";
+      log::error("Failed to open input file: {}", input_path.string());
       return EXIT_FAILURE;
     }
     if (!Run(input, output_path, width, height)) {

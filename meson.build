@@ -7,13 +7,17 @@ project(
         'cpp_std=c++26',
         'python.install_env=venv',
         'default_library=static',
+        'cpp_args=-stdlib=libc++',
+        'cpp_link_args=-stdlib=libc++',
+        'force_fallback_for=gtest',
     ],
 )
 
-add_project_link_arguments(['-static', '-static-libstdc++', '-static-libgcc', '-lstdc++fs'], language: 'cpp')
+add_project_arguments(['-stdlib=libc++'], language: 'cpp')
+add_project_link_arguments(['-stdlib=libc++', '-static'], language: 'cpp')
 
 blend2d_dep = dependency('blend2d')
-gtest_dep = dependency('gtest_main')
+gtest_dep = dependency('gtest_main', fallback: ['gtest', 'gtest_main_dep'])
 paperjs_dep = dependency('paperjs')
 quickjs_dep = dependency('quickjs')
 

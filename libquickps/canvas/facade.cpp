@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <iostream>
 #include <libquickps/canvas/facade.hpp>
+#include <libquickps/logger.hpp>
 
 namespace quickps {
 namespace canvas {
@@ -191,7 +192,7 @@ void SetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d,
 
 qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cerr << "save\n";
+  log::debug("save");
 
   if (first != last)
     throw qjs::Exception();
@@ -202,7 +203,7 @@ qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Restore(qjs::Context &, Context *c2d, qjs::ValueIter first,
                    qjs::ValueIter last) {
-  std::cerr << "restore\n";
+  log::debug("restore");
 
   if (first != last)
     throw qjs::Exception();
@@ -332,7 +333,7 @@ qjs::Value CreatePattern(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value ClearRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
-  std::cerr << "clearRect\n";
+  log::debug("clearRect");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -348,7 +349,7 @@ qjs::Value ClearRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value FillRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                     qjs::ValueIter last) {
-  std::cerr << "fillRect\n";
+  log::debug("fillRect");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -364,7 +365,7 @@ qjs::Value FillRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value StrokeRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                       qjs::ValueIter last) {
-  std::cerr << "strokeRect\n";
+  log::debug("strokeRect");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -380,7 +381,7 @@ qjs::Value StrokeRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value BeginPath(qjs::Context &, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
-  std::cerr << "beginPath\n";
+  log::debug("beginPath");
 
   if (first != last)
     throw qjs::Exception();
@@ -391,7 +392,7 @@ qjs::Value BeginPath(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value ClosePath(qjs::Context &, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
-  std::cerr << "closePath\n";
+  log::debug("closePath");
 
   if (first != last)
     throw qjs::Exception();
@@ -402,7 +403,7 @@ qjs::Value ClosePath(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value MoveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
-  std::cerr << "moveTo\n";
+  log::debug("moveTo");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -416,7 +417,7 @@ qjs::Value MoveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value LineTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
-  std::cerr << "lineTo\n";
+  log::debug("lineTo");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -444,7 +445,7 @@ qjs::Value QuadraticCurveTo(qjs::Context &ctx, Context *c2d,
 
 qjs::Value BezierCurveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                          qjs::ValueIter last) {
-  std::cerr << "bezierCurveTo\n";
+  log::debug("bezierCurveTo");
 
   auto cp1x = first++->Get<double>(ctx);
   auto cp1y = first++->Get<double>(ctx);
@@ -462,7 +463,7 @@ qjs::Value BezierCurveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value ArcTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                  qjs::ValueIter last) {
-  std::cerr << "arcTo\n";
+  log::debug("arcTo");
 
   auto x1 = first++->Get<double>(ctx);
   auto y1 = first++->Get<double>(ctx);
@@ -479,7 +480,7 @@ qjs::Value ArcTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Rect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cerr << "rect\n";
+  log::debug("rect");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -495,7 +496,7 @@ qjs::Value Rect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Arc(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                qjs::ValueIter last) {
-  std::cerr << "arc\n";
+  log::debug("arc");
 
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
@@ -517,7 +518,7 @@ qjs::Value Arc(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Fill(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cerr << "fill\n";
+  log::debug("fill");
 
   std::optional<std::string> fill_rule;
 
@@ -538,7 +539,7 @@ qjs::Value Fill(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Stroke(qjs::Context &, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
-  std::cerr << "stroke\n";
+  log::debug("stroke");
 
   if (first != last)
     throw qjs::Exception();
@@ -549,7 +550,7 @@ qjs::Value Stroke(qjs::Context &, Context *c2d, qjs::ValueIter first,
 
 qjs::Value Clip(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
-  std::cerr << "clip\n";
+  log::debug("clip");
 
   std::optional<std::string> fill_rule;
 
@@ -570,7 +571,7 @@ qjs::Value Clip(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value IsPointInPath(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                          qjs::ValueIter last) {
-  std::cerr << "isPointInPath\n";
+  log::debug("isPointInPath");
 
   std::optional<std::string> fill_rule;
 
@@ -685,7 +686,7 @@ qjs::Value GetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 qjs::Value CreateCanvas(qjs::Context &ctx,
                         [[maybe_unused]] qjs::Value this_value,
                         qjs::ValueIter first, qjs::ValueIter last) {
-  std::cerr << "createCavnas\n";
+  log::debug("createCanvas");
   auto ptr = quickjs::New<Canvas>(ctx, first, last);
   auto canvas = qjs::RcValue(
       ctx, ctx.CreateOpaque<Canvas>(std::move(ptr), qjs::Value::GetNull()));
@@ -696,7 +697,7 @@ qjs::Value CreateCanvas(qjs::Context &ctx,
 qjs::Value GetContext(qjs::Context &ctx, Canvas *canvas,
                       [[maybe_unused]] qjs::ValueIter first,
                       [[maybe_unused]] qjs::ValueIter last) {
-  std::cerr << "getContext\n";
+  log::debug("getContext");
 
   auto ptr = qjs::Runtime::GetInstance().Ctor<Context>(canvas->CreateContext());
   return ctx.CreateOpaque<Context>(std::move(ptr), qjs::Value::GetNull())

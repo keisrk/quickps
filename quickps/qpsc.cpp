@@ -12,8 +12,7 @@ static const char *desc = R"(qpsc PaperScript compiler
 -h,--help    Prints this help message.
 -i,--input   Input JS file path. Its content should be a valid PaperScript.
              If absent or specified as "--input -", reads from stdin.
--o,--output  Output image file path. Supported file extensions are {.png, .svg, .json}.
-             If absent, outputs SVG data to stdout.
+-o,--output  Output image file path (required). Supported file extension is .png.
 -s,--size    Geometry width and height of image. Defaults to "640x480".
 )";
 
@@ -23,11 +22,12 @@ static const struct option options[] = {{"help", no_argument, 0, 'h'},
                                         {"size", required_argument, 0, 's'},
                                         {0, 0, 0, 0}};
 
-void Run(std::istream &input_stream, std::filesystem::path &output_path,
+bool Run(std::istream &input_stream, std::filesystem::path &output_path,
          int width, int height) {
   QuickPs qps;
   qps.Init();
 
+  bool success = true;
   try {
     std::ostringstream code;
     code << input_stream.rdbuf();
@@ -38,12 +38,16 @@ void Run(std::istream &input_stream, std::filesystem::path &output_path,
     engine.Execute(exe);
     auto *canvas_ptr = qps.ctx().GetOpaque<canvas::Canvas>(canvas.value);
     canvas_ptr->Write(output_path);
-  } catch ([[maybe_unused]] quickjs::Exception &e) {
+  } catch ([[maybe_unused]] const quickjs::Exception &e) {
     std::cerr << qps.ctx();
-    throw;
+    success = false;
+  } catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << "\n";
+    success = false;
   }
 
   qps.Terminate();
+  return success;
 }
 
 } // namespace
@@ -80,15 +84,24 @@ int main(int argc, char **argv) {
     }
   }
 
+  if (output_path.empty()) {
+    std::cerr << "Error: Output file path (-o, --output) is required.\n";
+    return EXIT_FAILURE;
+  }
+
   if (input_path == "-") {
-    Run(std::cin, output_path, width, height);
+    if (!Run(std::cin, output_path, width, height)) {
+      return EXIT_FAILURE;
+    }
   } else {
     std::ifstream input(input_path);
     if (!input.is_open()) {
       std::cerr << "Failed to open input file: " << input_path << "\n";
       return EXIT_FAILURE;
     }
-    Run(input, output_path, width, height);
+    if (!Run(input, output_path, width, height)) {
+      return EXIT_FAILURE;
+    }
   }
 
   return EXIT_SUCCESS;

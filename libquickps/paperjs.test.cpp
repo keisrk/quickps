@@ -14,15 +14,15 @@ protected:
 };
 
 TEST_F(PaperJsTest, PaperJsGetByteCode) {
-  const auto &buf = paper::GetByteCode();
+  auto buf = paper::GetByteCode();
   EXPECT_EQ(buf.size(), 0x88329);
 }
 
 TEST_F(PaperJsTest, LoadByteCode) {
-  const auto &buf = paper::GetByteCode();
+  auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
 
-  auto module = ctx->LoadModule<paper::ByteCode>(buf);
+  auto module = ctx->LoadModule(buf);
   EXPECT_FALSE(module.IsException());
   EXPECT_EQ(JS_VALUE_GET_TAG(module.cobj()), JS_TAG_MODULE);
   JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
@@ -41,9 +41,9 @@ TEST_F(PaperJsTest, LoadByteCode) {
 }
 
 TEST_F(PaperJsTest, PaperScope) {
-  const auto &buf = paper::GetByteCode();
+  auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
-  auto module = ctx->LoadModule<paper::ByteCode>(buf);
+  auto module = ctx->LoadModule(buf);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
   JS_FreeValue(ctx->cobj(), module_eval.cobj());
@@ -85,9 +85,9 @@ TEST_F(PaperJsTest, PaperScope) {
 }
 
 TEST_F(PaperJsTest, PaperScript) {
-  const auto &buf = paper::GetByteCode();
+  auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
-  auto module = ctx->LoadModule<paper::ByteCode>(buf);
+  auto module = ctx->LoadModule(buf);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
   JS_FreeValue(ctx->cobj(), module_eval.cobj());

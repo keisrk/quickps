@@ -6,6 +6,7 @@
 #include <libquickps/quickjsmm/value.hpp>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
@@ -107,11 +108,9 @@ public:
   void Set(std::string &ref, Value val);
   void GetProperty();
 
-  template <typename T> Value LoadModule(const T &buf) {
-    static_assert(std::tuple_size<T>::value != 0, "Empty array");
-
-    JSValue result = JS_ReadObject(
-        cobj_, &buf.data()[0], std::tuple_size<T>::value, JS_READ_OBJ_BYTECODE);
+  Value LoadModule(std::span<const uint8_t> buf) {
+    JSValue result =
+        JS_ReadObject(cobj_, buf.data(), buf.size(), JS_READ_OBJ_BYTECODE);
 
     return WrapValue(result);
   }

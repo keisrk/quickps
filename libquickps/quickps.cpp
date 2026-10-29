@@ -30,8 +30,8 @@ void QuickPs::LoadContext() {
 }
 
 void QuickPs::LoadPaper() {
-  const auto &buf = paper::GetByteCode();
-  auto module = ctx_->LoadModule<paper::ByteCode>(buf);
+  auto buf = paper::GetByteCode();
+  auto module = ctx_->LoadModule(buf);
   auto module_eval =
       quickjs::RcValue(*ctx_, JS_EvalFunction(ctx_->cobj(), module.cobj()));
 

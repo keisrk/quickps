@@ -49,20 +49,28 @@ paperjs_pp = custom_target('paperjs_pp',
   capture : true,
 )
 
-paperjs_c = custom_target('paperjs_c',
+paperjs_bc = custom_target('paperjs_bc',
   input : [quickjs, paperjs_pp],
-  output : ['paper.cpp', 'paper.h'],
+  output : 'paper.bc',
   command : [
     py, prepro, 'compile',
     '--dll', '@INPUT0@',
-    '--ns', 'paper',
+    '--output', '@OUTPUT@',
     '@INPUT1@'
   ]
 )
 
+inc = include_directories('src')
+
 paperjs = library('paperjs',
-  paperjs_c)
+  'src/paper.cpp',
+  include_directories : inc,
+  cpp_args : [
+    '-Wno-c23-extensions',
+    '--embed-dir=@0@'.format(meson.current_build_dir()),
+  ],
+  dependencies : declare_dependency(sources : paperjs_bc))
 
 paperjs_dep = declare_dependency(
-  sources : paperjs_c[1],
+  include_directories : inc,
   link_with : paperjs)

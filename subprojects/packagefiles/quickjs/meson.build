@@ -1,4 +1,4 @@
-project('quickjs', 'c',  version : '2021-03-27')
+project('quickjs', 'c',  version : '2026-06-04')
 inc = include_directories('.')
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m')
@@ -6,14 +6,13 @@ dl_dep = dependency('dl')
 thread_dep = dependency('threads')
 src = files(
   'cutils.c',
-  'libbf.c',
+  'dtoa.c',
   'libunicode.c',
   'libregexp.c',
   'quickjs.c',
 )
 extra_args = [
   '-D_GNU_SOURCE',
-  '-DCONFIG_BIGNUM',
   '-DCONFIG_VERSION="@0@"'.format(meson.project_version()),
   '-w',
 ]

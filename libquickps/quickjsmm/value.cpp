@@ -6,7 +6,7 @@ namespace quickjs {
 Value Value::GetNull() {
   JSValueUnion zero;
   JSValue null;
-  zero.int32 = 0;
+  zero.uint64 = 0;
   null.u = zero;
   null.tag = JS_TAG_NULL;
 
@@ -16,7 +16,7 @@ Value Value::GetNull() {
 Value Value::GetUndefined() {
   JSValueUnion zero;
   JSValue undefined;
-  zero.int32 = 0;
+  zero.uint64 = 0;
   undefined.u = zero;
   undefined.tag = JS_TAG_UNDEFINED;
 

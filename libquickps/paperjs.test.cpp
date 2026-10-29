@@ -15,7 +15,7 @@ protected:
 
 TEST_F(PaperJsTest, PaperJsGetByteCode) {
   const auto &buf = paper::GetByteCode();
-  EXPECT_EQ(buf.size(), 0x59f9f);
+  EXPECT_EQ(buf.size(), 0x71706);
 }
 
 TEST_F(PaperJsTest, LoadByteCode) {
@@ -36,7 +36,8 @@ TEST_F(PaperJsTest, LoadByteCode) {
 
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
-  EXPECT_EQ(JS_VALUE_GET_TAG(module_eval.cobj()), JS_TAG_UNDEFINED);
+  EXPECT_EQ(JS_VALUE_GET_TAG(module_eval.cobj()), JS_TAG_OBJECT);
+  JS_FreeValue(ctx->cobj(), module_eval.cobj());
 }
 
 TEST_F(PaperJsTest, PaperScope) {
@@ -45,6 +46,7 @@ TEST_F(PaperJsTest, PaperScope) {
   auto module = ctx->LoadModule<paper::ByteCode>(buf);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
+  JS_FreeValue(ctx->cobj(), module_eval.cobj());
 
   auto global_this = Value(JS_GetGlobalObject(ctx->cobj()));
   EXPECT_FALSE(global_this.IsException());
@@ -88,6 +90,7 @@ TEST_F(PaperJsTest, PaperScript) {
   auto module = ctx->LoadModule<paper::ByteCode>(buf);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
+  JS_FreeValue(ctx->cobj(), module_eval.cobj());
 
   auto global_this = Value(JS_GetGlobalObject(ctx->cobj()));
   EXPECT_FALSE(global_this.IsException());

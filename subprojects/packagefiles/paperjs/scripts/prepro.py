@@ -8,6 +8,8 @@ from ctypes import (
     c_bool,
     c_double,
     c_int32,
+    c_int64,
+    c_uint64,
     c_char_p,
     c_size_t,
     c_ubyte,
@@ -63,7 +65,7 @@ const std::array<uint8_t, @BYTE_CODE_LEN@>& GetByteCode() {
 
 class JsValueUnion(Union):
     _fields_ = [
-        ("int32", c_int32),
+        ("uint64", c_uint64),
         ("float64", c_double),
         ("ptr", c_void_p),
     ]
@@ -72,7 +74,7 @@ class JsValueUnion(Union):
 class JsValue(Structure):
     _fields_ = [
         ("u", JsValueUnion),
-        ("tag", c_int32),
+        ("tag", c_int64),
     ]
 
 
@@ -100,6 +102,7 @@ class QuickJs:
 
         cls.qjs = CDLL(dll_path)
         cls.qjs.JS_NewRuntime.restype = c_void_p
+        cls.qjs.JS_SetStripInfo.argtypes = [c_void_p, c_int32]
         cls.qjs.JS_NewContext.argtypes = [c_void_p]
         cls.qjs.JS_NewContext.restype = c_void_p
         cls.qjs.JS_IsError.restype = c_bool
@@ -122,18 +125,29 @@ class QuickJs:
         ]
         cls.qjs.JS_FreeContext.argtypes = [c_void_p]
         cls.qjs.JS_FreeRuntime.argtypes = [c_void_p]
+        cls.qjs.JS_FreeCString.argtypes = [c_void_p, c_void_p]
+        getattr(cls.qjs, "__JS_FreeValue").argtypes = [c_void_p, JsValue]
+        cls.qjs.js_free.argtypes = [c_void_p, c_void_p]
 
     def __init__(self):
         self.filename: Optional[str] = None
 
     def __enter__(self):
         self.rt = self.qjs.JS_NewRuntime()
+        self.qjs.JS_SetStripInfo(self.rt, 1)
         self.ctx = self.qjs.JS_NewContext(self.rt)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.qjs.JS_FreeContext(self.ctx)
         self.qjs.JS_FreeRuntime(self.rt)
+
+    def free_value(self, v: JsValue):
+        if v.tag < 0:
+            rc = c_int32.from_address(v.u.ptr - 4)
+            rc.value -= 1
+            if rc.value <= 0:
+                getattr(self.qjs, "__JS_FreeValue")(self.ctx, v)
 
     def evaluate(self, js: str):
         ret = self._evaluate(js)
@@ -144,9 +158,12 @@ class QuickJs:
 
         if ret.tag == JS_TAG_STRING:
             s = result.decode("utf-8")
-            return f"'{s}'"
+            out = f"'{s}'"
         else:
-            return result.decode("utf-8")
+            out = result.decode("utf-8")
+
+        self.free_value(ret)
+        return out
 
     def compile(self, js: str):
         ret = self._evaluate(
@@ -156,11 +173,14 @@ class QuickJs:
         buf = self.qjs.JS_WriteObject(
             self.ctx, byref(length), ret, JS_WRITE_OBJ_BYTECODE
         )
+        self.free_value(ret)
 
         if buf is None or length.value == 0:
             raise Exception("JS module failed to compile")
 
-        return ByteCodeObject(buf, length.value)
+        data = bytes(buf[: length.value])
+        self.qjs.js_free(self.ctx, buf)
+        return ByteCodeObject((c_ubyte * length.value).from_buffer_copy(data), length.value)
 
     def _evaluate(self, js: str, eval_flag=JS_EVAL_TYPE_GLOBAL):
         if self.filename is None:

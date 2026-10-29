@@ -33,7 +33,7 @@ void QuickPs::LoadPaper() {
   const auto &buf = paper::GetByteCode();
   auto module = ctx_->LoadModule<paper::ByteCode>(buf);
   auto module_eval =
-      quickjs::Value(JS_EvalFunction(ctx_->cobj(), module.cobj()));
+      quickjs::RcValue(*ctx_, JS_EvalFunction(ctx_->cobj(), module.cobj()));
 
   if (module_eval.IsException())
     throw quickjs::Exception();

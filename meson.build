@@ -9,11 +9,9 @@ project('quickps', 'cpp',
 )
 
 add_project_link_arguments(['-lstdc++fs'], language : 'cpp')
-subproject('quickjs')
-subproject('paperjs')
 
 cairo_dep = dependency('cairomm-1.0', static : false)
-gtest_dep = dependency('gtest', main : true)
+gtest_dep = dependency('gtest_main')
 paperjs_dep = dependency('paperjs')
 quickjs_dep = dependency('quickjs')
 

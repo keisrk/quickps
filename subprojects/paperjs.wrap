@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/paperjs/paper.js.git
-revision = deabde08c655fb04f6f5f38d7110ccea259fb8ce
+revision = v0.16.0
 patch_directory = paperjs
 
 [provide]

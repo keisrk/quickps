@@ -26,6 +26,11 @@ globalThis.self.nodom.HTMLElement.prototype.getContext = function (toodee) {
 }
 
 globalThis.self.nodom.Document.prototype.addEventListener = function () {}
+globalThis.self.nodom.Document.prototype.defaultView = {
+  getComputedStyle: function () {
+    return {}
+  }
+}
 
 /* eslint-disable */
 globalThis.self.document = new globalThis.self.nodom.Document();

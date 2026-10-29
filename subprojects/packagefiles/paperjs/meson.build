@@ -1,4 +1,4 @@
-project('paperjs', 'cpp',  version : '0.12.17')
+project('paperjs', 'cpp',  version : '0.16.0')
 
 curl = find_program('curl')
 py_mod = import('python')

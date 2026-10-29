@@ -10,7 +10,7 @@ project(
     ],
 )
 
-add_project_link_arguments(['-static-libstdc++', '-static-libgcc', '-lstdc++fs'], language: 'cpp')
+add_project_link_arguments(['-static', '-static-libstdc++', '-static-libgcc', '-lstdc++fs'], language: 'cpp')
 
 blend2d_dep = dependency('blend2d')
 gtest_dep = dependency('gtest_main')

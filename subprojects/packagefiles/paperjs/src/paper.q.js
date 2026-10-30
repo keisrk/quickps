@@ -17,7 +17,25 @@ globalThis.global = globalThis.self;
 /*#*/ include('../node_modules/nodom/nodom.js')
 /* eslint-enable */
 
-globalThis.self.nodom.HTMLElement.prototype.setAttributeNS = function () {}
+globalThis.self.XMLSerializer = function () {
+  this.serializeToString = function (node) {
+    return node.outerHTML;
+  };
+};
+
+globalThis.self.nodom.HTMLElement.prototype.setAttributeNS = function (
+  ns,
+  name,
+  value
+) {
+  return this.setAttribute(name, value);
+};
+globalThis.self.nodom.HTMLElement.prototype.getAttributeNS = function (
+  ns,
+  name
+) {
+  return this.getAttribute(name);
+};
 globalThis.self.nodom.HTMLElement.prototype.getContext = function (toodee) {
   return {
     save: function () {},

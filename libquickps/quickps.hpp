@@ -63,6 +63,7 @@ public:
   PaperExecutable Compile(const char *source);
   PaperExecutable Compile(const std::string &source);
   void Execute(const PaperExecutable &exe);
+  std::string ExportSVG();
 
 private:
   QuickPs &qps_;

@@ -48,4 +48,19 @@ TEST_F(E2eTest, AllTheWay) {
   canvas_ptr->Write(output);
 }
 
+TEST_F(E2eTest, ExportSvg) {
+  auto scope = qps_.CreatePaperScope();
+  auto canvas = scope.Inject().CreateCanvas(640, 480);
+  auto engine = scope.SetUp(canvas);
+  auto exe = engine.Compile(kSource);
+  engine.Execute(exe);
+
+  auto svg = engine.ExportSVG();
+  EXPECT_NE(svg.find("<svg"), std::string::npos);
+  EXPECT_NE(svg.find("xmlns=\"http://www.w3.org/2000/svg\""),
+            std::string::npos);
+  EXPECT_NE(svg.find("</svg>"), std::string::npos);
+  EXPECT_NE(svg.find("<path"), std::string::npos);
+}
+
 } // namespace

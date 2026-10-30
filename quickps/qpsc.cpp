@@ -18,7 +18,7 @@ static const char *desc = R"(qpsc PaperScript compiler
 -h,--help    Prints this help message.
 -i,--input   Input JS file path. Its content should be a valid PaperScript.
              If absent or specified as "--input -", reads from stdin.
--o,--output  Output image file path (required). Supported file extension is .png.
+-o,--output  Output image file path (required). Supported file extensions are .png, .svg.
 -s,--size    Geometry width and height of image. Defaults to "640x480".
 --verbose    Enable verbose debug logging.
 )";
@@ -45,8 +45,17 @@ bool Run(std::istream &input_stream, std::filesystem::path &output_path,
     auto engine = scope.SetUp(canvas);
     auto exe = engine.Compile(code.str());
     engine.Execute(exe);
-    auto *canvas_ptr = qps.ctx().GetOpaque<canvas::Canvas>(canvas.value);
-    canvas_ptr->Write(output_path);
+    if (output_path.extension() == ".svg") {
+      std::ofstream output(output_path);
+      if (!output.is_open()) {
+        log::error("Failed to open output file: {}", output_path.string());
+        return false;
+      }
+      output << engine.ExportSVG();
+    } else {
+      auto *canvas_ptr = qps.ctx().GetOpaque<canvas::Canvas>(canvas.value);
+      canvas_ptr->Write(output_path);
+    }
   } catch ([[maybe_unused]] const quickjs::Exception &e) {
     std::cerr << qps.ctx();
     success = false;

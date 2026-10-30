@@ -155,6 +155,20 @@ void PaperScript::Execute(const PaperExecutable &exe) {
   }
 }
 
+std::string PaperScript::ExportSVG() {
+  auto project = scope_.Get("project");
+  auto options = qps_.ctx().GetObject({});
+  options.Set("asString", qps_.ctx().Get(true));
+  auto ret = quickjs::RcValue(qps_.ctx(),
+                              project.Invoke("exportSVG", {options.value()}));
+
+  if (ret.IsException()) {
+    throw quickjs::Exception();
+  }
+
+  return ret.value().Get<std::string>(qps_.ctx());
+}
+
 PaperCanvasProvider::PaperCanvasProvider(QuickPs &qps) : qps_(qps) {}
 
 PaperCanvas PaperCanvasProvider::CreateCanvas(int width, int height) {

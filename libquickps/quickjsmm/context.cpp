@@ -96,7 +96,11 @@ std::unordered_map<std::size_t, JSClassID> Runtime::class_registry_ = {};
 void Runtime::Init() {
   Runtime::cobj_ = JS_NewRuntime();
   Runtime::class_registry_.clear();
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
+  JS_SetMaxStackSize(Runtime::cobj_.value(), 8 * JS_DEFAULT_STACK_SIZE);
+#else
   JS_SetMaxStackSize(Runtime::cobj_.value(), 2 * JS_DEFAULT_STACK_SIZE);
+#endif
 }
 
 void Runtime::Terminate() {

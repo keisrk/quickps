@@ -74,3 +74,37 @@ meson test -C build
 ```
 
 It creates a test report (`./build/examples.html`).
+
+### Configuration Options
+
+You can pass options during `meson setup` or update an existing build directory with `meson configure build -D<option>=<value>`.
+
+| Option | Allowed Values | Description |
+| :--- | :--- | :--- |
+| `b_sanitize` | `none` (default), `address`, `undefined`, `address,undefined` | Enables compiler sanitizers. When set to `address`, memory errors (out-of-bounds, use-after-free) are tracked during test runs. Note that `qpsc` is dynamically linked under sanitizers. When `none`, `qpsc` is statically linked. |
+| `buildtype` | `debug` (default), `release`, `debugoptimized`, `plain` | Sets optimization and debug symbol levels. Use `release` for optimized builds (`-O3`). |
+
+#### Testing with Sanitizers
+
+When AddressSanitizer is enabled, `unit_test` and `integration test` will detect memory safety issues:
+
+```bash
+# Enable AddressSanitizer
+meson configure build -Db_sanitize=address
+meson compile -C build
+
+# Run tests (default setup: checks memory errors without leak noise)
+meson test -C build
+
+# Run tests with leak detection enabled
+meson test -C build --setup=leakcheck
+```
+
+#### Standalone Portable Release Build
+
+To build a standalone, statically linked `qpsc` binary for release:
+
+```bash
+meson configure build -Db_sanitize=none --buildtype=release
+meson compile -C build
+```

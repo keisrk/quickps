@@ -1,7 +1,7 @@
 #include <array>
 #include <gtest/gtest.h>
 #include <libquickps/quickjsmm/context.hpp>
-#include <paper.h>
+#include <paperjs/paper.h>
 
 namespace {
 
@@ -15,7 +15,7 @@ protected:
 
 TEST_F(PaperJsTest, PaperJsGetByteCode) {
   auto buf = paper::GetByteCode();
-  EXPECT_EQ(buf.size(), 0x8c4db);
+  EXPECT_EQ(buf.size(), 0x90744);
 }
 
 TEST_F(PaperJsTest, LoadByteCode) {
@@ -44,15 +44,16 @@ TEST_F(PaperJsTest, PaperScope) {
   auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
   auto module = ctx->LoadModule(buf);
+  JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
   JS_FreeValue(ctx->cobj(), module_eval.cobj());
 
-  auto global_this = Value(JS_GetGlobalObject(ctx->cobj()));
-  EXPECT_FALSE(global_this.IsException());
+  auto ns = Value(JS_GetModuleNamespace(ctx->cobj(), m));
+  EXPECT_FALSE(ns.IsException());
 
   auto paper =
-      Value(JS_GetPropertyStr(ctx->cobj(), global_this.cobj(), "paper"));
+      Value(JS_GetPropertyStr(ctx->cobj(), ns.cobj(), "default"));
   EXPECT_FALSE(paper.IsException());
   EXPECT_EQ(JS_VALUE_GET_TAG(paper.cobj()), JS_TAG_OBJECT);
 
@@ -76,7 +77,7 @@ TEST_F(PaperJsTest, PaperScope) {
   EXPECT_FALSE(setup.IsException());
   EXPECT_TRUE(JS_IsFunction(ctx->cobj(), setup.cobj()));
 
-  JS_FreeValue(ctx->cobj(), global_this.cobj());
+  JS_FreeValue(ctx->cobj(), ns.cobj());
   JS_FreeValue(ctx->cobj(), paper.cobj());
   JS_FreeValue(ctx->cobj(), paper_scope.cobj());
   JS_FreeValue(ctx->cobj(), inject.cobj());
@@ -88,15 +89,16 @@ TEST_F(PaperJsTest, PaperScript) {
   auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
   auto module = ctx->LoadModule(buf);
+  JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
   EXPECT_FALSE(module_eval.IsException());
   JS_FreeValue(ctx->cobj(), module_eval.cobj());
 
-  auto global_this = Value(JS_GetGlobalObject(ctx->cobj()));
-  EXPECT_FALSE(global_this.IsException());
+  auto ns = Value(JS_GetModuleNamespace(ctx->cobj(), m));
+  EXPECT_FALSE(ns.IsException());
 
   auto paper =
-      Value(JS_GetPropertyStr(ctx->cobj(), global_this.cobj(), "paper"));
+      Value(JS_GetPropertyStr(ctx->cobj(), ns.cobj(), "default"));
   EXPECT_FALSE(paper.IsException());
   EXPECT_EQ(JS_VALUE_GET_TAG(paper.cobj()), JS_TAG_OBJECT);
 
@@ -115,7 +117,7 @@ TEST_F(PaperJsTest, PaperScript) {
   EXPECT_FALSE(execute.IsException());
   EXPECT_TRUE(JS_IsFunction(ctx->cobj(), execute.cobj()));
 
-  JS_FreeValue(ctx->cobj(), global_this.cobj());
+  JS_FreeValue(ctx->cobj(), ns.cobj());
   JS_FreeValue(ctx->cobj(), paper.cobj());
   JS_FreeValue(ctx->cobj(), paper_script.cobj());
   JS_FreeValue(ctx->cobj(), compile.cobj());

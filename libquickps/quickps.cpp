@@ -1,5 +1,5 @@
 #include <libquickps/quickps.hpp>
-#include <paper.h>
+#include <paperjs/paper.h>
 
 namespace quickps {
 
@@ -32,11 +32,25 @@ void QuickPs::LoadContext() {
 void QuickPs::LoadPaper() {
   auto buf = paper::GetByteCode();
   auto module = ctx_->LoadModule(buf);
+  if (module.IsException())
+    throw quickjs::Exception();
+
+  JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval =
       quickjs::RcValue(*ctx_, JS_EvalFunction(ctx_->cobj(), module.cobj()));
 
   if (module_eval.IsException())
     throw quickjs::Exception();
+
+  auto ns = quickjs::RcValue(*ctx_, JS_GetModuleNamespace(ctx_->cobj(), m));
+  if (ns.IsException())
+    throw quickjs::Exception();
+
+  auto paper = ns.Get("default");
+  if (paper.IsException())
+    throw quickjs::Exception();
+
+  paper_.emplace(std::move(paper));
 }
 
 void QuickPs::LoadCanvasClass() {
@@ -57,13 +71,15 @@ void QuickPs::FreeContext2dClass() {
 
 void QuickPs::FreeCanvasClass() { canvas_.reset(); }
 
-void QuickPs::FreePaper() {}
+void QuickPs::FreePaper() { paper_.reset(); }
 
 void QuickPs::FreeContext() { ctx_.reset(); }
 
 PaperScope QuickPs::CreatePaperScope() { return PaperScope(*this); }
 
 quickjs::Context &QuickPs::ctx() { return *ctx_.get(); }
+
+quickjs::RcValue &QuickPs::paper() { return paper_.value(); }
 
 quickjs::Value QuickPs::canvas() { return canvas_.value().Take(); }
 
@@ -79,7 +95,7 @@ PaperScope::PaperScope(QuickPs &qps) : qps_(qps) {
 }
 
 PaperCanvasProvider PaperScope::Inject() {
-  auto scope = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScope");
+  auto scope = qps_.paper().Get("PaperScope");
   auto input = qps_.ctx().GetObject({});
   input.Set("createCanvas", qps_.create_canvas());
   auto ret = scope.Invoke("inject", {input.value()});
@@ -89,7 +105,7 @@ PaperCanvasProvider PaperScope::Inject() {
 }
 
 PaperScript PaperScope::SetUp(PaperCanvas &canvas) {
-  auto scope = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScope");
+  auto scope = qps_.paper().Get("PaperScope");
   auto instance = quickjs::RcValue(
       qps_.ctx(),
       JS_CallConstructor(qps_.ctx().cobj(), scope.cobj(), 0, nullptr));
@@ -113,7 +129,7 @@ PaperScript::PaperScript(QuickPs &qps, quickjs::Value scope)
     : qps_(qps), scope_(qps.ctx(), scope) {}
 
 PaperExecutable PaperScript::Compile(const char *source) {
-  auto engine = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScript");
+  auto engine = qps_.paper().Get("PaperScript");
   auto ps = quickjs::RcValue(qps_.ctx(), qps_.ctx().Get(source));
   auto compiled =
       quickjs::RcValue(qps_.ctx(), engine.Invoke("compile", {ps.value()}));
@@ -129,7 +145,7 @@ PaperExecutable PaperScript::Compile(const std::string &source) {
 }
 
 void PaperScript::Execute(const PaperExecutable &exe) {
-  auto engine = qps_.ctx().GetGlobalThis().Get("paper").Get("PaperScript");
+  auto engine = qps_.paper().Get("PaperScript");
   {
     auto compiled = qps_.ctx().GetObject({});
     compiled.Set("code", exe.code);
@@ -169,11 +185,11 @@ std::string PaperScript::ExportSVG() {
   return ret.value().Get<std::string>(qps_.ctx());
 }
 
-PaperCanvasProvider::PaperCanvasProvider(QuickPs &qps) : qps_(qps) {}
+PaperCanvasProvider::PaperCanvasProvider(QuickPs &qps)
+    : qps_(qps) {}
 
 PaperCanvas PaperCanvasProvider::CreateCanvas(int width, int height) {
-  auto create_canvas =
-      qps_.ctx().GetGlobalThis().Get("paper").Get("createCanvas");
+  auto create_canvas = qps_.paper().Get("createCanvas");
 
   std::vector<quickjs::Value> args({
       qps_.ctx().Get(width).cobj(),

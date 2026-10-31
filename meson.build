@@ -18,10 +18,10 @@ add_project_link_arguments(['-stdlib=libc++', '-static'], language: 'cpp')
 
 blend2d_dep = dependency('blend2d')
 gtest_dep = dependency('gtest_main', fallback: ['gtest', 'gtest_main_dep'])
-paperjs_dep = dependency('paperjs')
 quickjs_dep = dependency('quickjs')
 
 inc = include_directories('.')
+subdir('paperjs')
 subdir('libquickps')
 subdir('quickps')
 subdir('examples')

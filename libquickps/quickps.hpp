@@ -30,9 +30,11 @@ public:
   quickjs::Value canvas();
   quickjs::Value c2d();
   quickjs::Value create_canvas();
+  quickjs::RcValue &paper();
 
 private:
   std::unique_ptr<quickjs::Context, quickjs::ContextDeleter> ctx_;
+  std::optional<quickjs::RcValue> paper_;
   std::optional<quickjs::RcValue> canvas_;
   std::optional<quickjs::RcValue> c2d_;
   std::optional<quickjs::RcValue> create_canvas_;

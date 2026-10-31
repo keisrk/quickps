@@ -1,4 +1,4 @@
-#include <paper.h>
+#include <paperjs/paper.h>
 
 namespace {
 constexpr uint8_t kByteCode[] = {

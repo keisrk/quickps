@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <libquickps/quickps.hpp>
-#include <paper.h>
+#include <paperjs/paper.h>
 
 namespace {
 using namespace quickps;

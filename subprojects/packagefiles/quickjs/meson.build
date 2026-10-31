@@ -24,3 +24,22 @@ quickjs = both_libraries('quickjs', src,
 quickjs_dep = declare_dependency(
   include_directories : inc,
   link_with : quickjs.get_static_lib())
+
+qjs = executable('qjs',
+  'qjs.c',
+  'quickjs-libc.c',
+  'repl_stub.c',
+  c_args : extra_args,
+  dependencies : [quickjs_dep, m_dep, dl_dep, thread_dep],
+  native : true,
+)
+meson.override_find_program('qjs', qjs)
+
+compile_bc = executable('compile_bc',
+  'compile_bc.c',
+  'quickjs-libc.c',
+  c_args : extra_args,
+  dependencies : [quickjs_dep, m_dep, dl_dep, thread_dep],
+  native : true,
+)
+meson.override_find_program('compile_bc', compile_bc)

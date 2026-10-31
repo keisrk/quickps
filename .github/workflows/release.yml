@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-20 libc++-20-dev libc++abi-20-dev ninja-build pkg-config curl
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python tools
+        run: pip install meson pytest pytest-html
+
+      - name: Build and test
+        run: |
+          CC=clang-20 CXX=clang++-20 meson setup build --buildtype=release
+          meson compile -C build
+          meson test -C build
+
+      - name: Package
+        run: |
+          PKG="quickps-${{ github.ref_name }}-linux-x86_64"
+          mkdir -p "$PKG"
+          cp build/quickps/qpsc LICENSE README.md "$PKG/"
+          tar -czf "$PKG.tar.gz" "$PKG"
+          sha256sum "$PKG.tar.gz" > "$PKG.tar.gz.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quickps-${{ github.ref_name }}-linux-x86_64
+          path: quickps-*.tar.gz*
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: quickps-*.tar.gz*
+          generate_release_notes: true

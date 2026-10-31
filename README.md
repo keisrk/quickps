@@ -46,11 +46,34 @@ will then automatically update the property over the course of the specified dur
 
 ## Installation
 
-TBA
+Download the precompiled static binary from [GitHub Releases](https://github.com/keisrk/quickps/releases):
+
+```bash
+# Extract and install binary to ~/.local/bin
+tar -xzf quickps-*-linux-x86_64.tar.gz
+mkdir -p ~/.local/bin
+mv quickps-*-linux-x86_64/qpsc ~/.local/bin/
+```
+
+Or build from source (see [Development](#development)).
 
 ## Usage
 
-TBA
+Compile a PaperScript file into a raster (PNG) or vector (SVG) image:
+
+```bash
+# Render to PNG (default size: 640x480)
+qpsc -i script.js -o output.png
+
+# Export to SVG
+qpsc -i script.js -o output.svg
+
+# Specify canvas dimensions
+qpsc -i script.js -o output.png -s 1280x720
+
+# Pipe from stdin
+cat script.js | qpsc -o output.png
+```
 
 ## Development
 
@@ -75,36 +98,19 @@ meson test -C build
 
 It creates a test report (`./build/examples.html`).
 
-### Configuration Options
+### Build Profiles
 
-You can pass options during `meson setup` or update an existing build directory with `meson configure build -D<option>=<value>`.
-
-| Option | Allowed Values | Description |
+| Profile | Configuration Flags | Description |
 | :--- | :--- | :--- |
-| `b_sanitize` | `none` (default), `address`, `undefined`, `address,undefined` | Enables compiler sanitizers. When set to `address`, memory errors (out-of-bounds, use-after-free) are tracked during test runs. Note that `qpsc` is dynamically linked under sanitizers. When `none`, `qpsc` is statically linked. |
-| `buildtype` | `debug` (default), `release`, `debugoptimized`, `plain` | Sets optimization and debug symbol levels. Use `release` for optimized builds (`-O3`). |
-
-#### Testing with Sanitizers
-
-When AddressSanitizer is enabled, `unit_test` and `integration test` will detect memory safety issues:
+| **Debug with sanitizers** | `-Db_sanitize=address` | Development & testing. Dynamically linked with AddressSanitizer enabled. |
+| **Release** | `--buildtype=release` | Distribution. Optimized (`-O3`) with statically linked `qpsc`. |
 
 ```bash
-# Enable AddressSanitizer
+# Debug with sanitizers (tests catch memory errors)
 meson configure build -Db_sanitize=address
-meson compile -C build
-
-# Run tests (default setup: checks memory errors without leak noise)
 meson test -C build
 
-# Run tests with leak detection enabled
-meson test -C build --setup=leakcheck
-```
-
-#### Standalone Portable Release Build
-
-To build a standalone, statically linked `qpsc` binary for release:
-
-```bash
-meson configure build -Db_sanitize=none --buildtype=release
+# Release (statically linked binary)
+meson configure build --buildtype=release
 meson compile -C build
 ```

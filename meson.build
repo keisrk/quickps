@@ -5,7 +5,7 @@ project(
     default_options: [
         'warning_level=3',
         'cpp_std=c++26',
-        'python.install_env=venv',
+        'python.install_env=auto',
         'default_library=static',
         'cpp_args=-stdlib=libc++',
         'cpp_link_args=-stdlib=libc++',

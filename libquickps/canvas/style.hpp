@@ -2,6 +2,7 @@
 #define QUICKPS_CANVAS_STYLE_H_
 
 #include <blend2d/blend2d.h>
+
 #include <libquickps/canvas/color.hpp>
 #include <variant>
 
@@ -16,16 +17,16 @@ struct Style final {
   Style(const BLGradient &gradient);
   Style(const BLPattern &pattern);
 
-public:
+ public:
   static Style FromColor(const Color &);
   static Style FromGradient(const BLGradient &gradient);
   static Style FromPattern(const BLPattern &pattern);
 };
 
-} // namespace canvas
-} // namespace quickps
+}  // namespace canvas
+}  // namespace quickps
 
-#endif // QUICKPS_CANVAS_STYLE_H_
+#endif  // QUICKPS_CANVAS_STYLE_H_
 /*
 
 class Style {

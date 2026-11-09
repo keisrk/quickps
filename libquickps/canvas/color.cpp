@@ -101,7 +101,8 @@ struct ParsedNumber {
   std::string_view unit;
 };
 
-std::optional<ParsedNumber> ParseNumberAndUnit(std::string_view token) noexcept {
+std::optional<ParsedNumber> ParseNumberAndUnit(
+    std::string_view token) noexcept {
   token = TrimCssSpaces(token);
   if (token.empty()) {
     return std::nullopt;
@@ -269,7 +270,7 @@ std::optional<Color> ParseRgbArgs(std::string_view body) noexcept {
   return Color(rgb[0], rgb[1], rgb[2], alpha);
 }
 
-std::optional< float > ParseHueDegrees(std::string_view token) noexcept {
+std::optional<float> ParseHueDegrees(std::string_view token) noexcept {
   auto parsed = ParseNumberAndUnit(token);
   if (!parsed.has_value()) {
     return std::nullopt;
@@ -419,7 +420,7 @@ constexpr std::array<NamedColor, 149> kNamedColors = {{
     {"plum", 0xDDA0DDFF},
     {"powderblue", 0xB0E0E6FF},
     {"purple", 0x800080FF},
-    {"rebeccapurple", 0x663399FF}, // Source: CSS Color Level 4
+    {"rebeccapurple", 0x663399FF},  // Source: CSS Color Level 4
     {"red", 0xFF0000FF},
     {"rosybrown", 0xBC8F8FFF},
     {"royalblue", 0x4169E1FF},
@@ -453,7 +454,7 @@ constexpr std::array<NamedColor, 149> kNamedColors = {{
 
 static_assert(std::ranges::is_sorted(kNamedColors, {}, &NamedColor::first));
 
-} // namespace
+}  // namespace
 
 bool operator==(const Color &lhs, const Color &rhs) {
   return std::fabs(lhs.r - rhs.r) < EPSILON &&
@@ -544,7 +545,7 @@ Color Color::FromString(std::string_view str) {
 }
 
 std::optional<Color> Color::FromName(std::string_view str) {
-  constexpr size_t kMaxNameLen = 20; // "lightgoldenrodyellow"
+  constexpr size_t kMaxNameLen = 20;  // "lightgoldenrodyellow"
   if (str.empty() || str.size() > kMaxNameLen) {
     return std::nullopt;
   }
@@ -562,5 +563,5 @@ std::optional<Color> Color::FromName(std::string_view str) {
   return Color::Create(it->second);
 }
 
-} // namespace canvas
-} // namespace quickps
+}  // namespace canvas
+}  // namespace quickps

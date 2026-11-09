@@ -20,13 +20,14 @@ class Context;
 class ContextDeleter;
 
 class Runtime final {
-public:
+ public:
   static void Init();
   static void Terminate();
   static Runtime GetInstance();
   static const std::unique_ptr<Context, ContextDeleter> CreateContext();
 
-  template <class T> static void Dtor(T *ptr) {
+  template <class T>
+  static void Dtor(T *ptr) {
     auto rt = Runtime::GetInstance();
     if (ptr) {
       ptr->~T();
@@ -40,7 +41,8 @@ public:
   Runtime(const Runtime &) = delete;
   Runtime &operator=(const Runtime &) = delete;
 
-  template <typename T> JSClassID ClassId() {
+  template <typename T>
+  JSClassID ClassId() {
     size_t id = typeid(T).hash_code();
 
     if (class_registry_.find(id) == class_registry_.end()) {
@@ -55,45 +57,49 @@ public:
   const std::unique_ptr<T, OpaqueDeleter<T>> Ctor(Ts... args) {
     void *buf = js_mallocz_rt(cobj_.value(), sizeof(T));
 
-    if (!buf)
-      throw Exception();
+    if (!buf) throw Exception();
 
     T *ptr = new (buf) T(args...);
     return std::unique_ptr<T, OpaqueDeleter<T>>(ptr, Dtor<T>);
   }
 
-  template <typename T> T *GetOpaque(Value value) {
+  template <typename T>
+  T *GetOpaque(Value value) {
     auto js_point_class_id = ClassId<T>();
     void *s = JS_GetOpaque(value.cobj(), js_point_class_id);
     return static_cast<T *>(s);
   }
 
-  template <class T> void Finalize(Value value) {
+  template <class T>
+  void Finalize(Value value) {
     T *ptr = GetOpaque<T>(value);
     Runtime::Dtor<T>(ptr);
   }
 
-  template <typename T> void Register(const JSClassDef &def) {
+  template <typename T>
+  void Register(const JSClassDef &def) {
     if (int status = JS_NewClass(cobj_.value(), ClassId<T>(), &def);
         status < 0) {
       throw Exception();
     }
   }
 
-private:
+ private:
   static std::optional<JSRuntime *> cobj_;
   static std::unordered_map<std::size_t, JSClassID> class_registry_;
   Runtime() {}
 };
 
-template <class T> using OpaqueDeleter = Runtime::OpaqueDeleter<T>;
-template <class T> const Class &GetClass();
+template <class T>
+using OpaqueDeleter = Runtime::OpaqueDeleter<T>;
+template <class T>
+const Class &GetClass();
 template <class T>
 std::unique_ptr<T, OpaqueDeleter<T>> New(Context &ctx, ValueIter first,
                                          ValueIter last);
 
 class Context final : public ContextProvider {
-public:
+ public:
   constexpr Context(JSContext *ctx) : cobj_(ctx) {}
   Context(const Context &) = delete;
   Context &operator=(const Context &) = delete;
@@ -118,7 +124,8 @@ public:
     return WrapValue(result);
   }
 
-  template <typename T> RcValue Register(const Class &spec) {
+  template <typename T>
+  RcValue Register(const Class &spec) {
     Runtime::GetInstance().Register<T>(spec.def);
     auto prototype = WrapValue(JS_NewObject(cobj()));
     JS_SetPropertyFunctionList(cobj(), prototype.cobj(), spec.prototype.data(),
@@ -141,7 +148,8 @@ public:
     return function;
   }
 
-  template <typename T> T *GetOpaque(Value value) {
+  template <typename T>
+  T *GetOpaque(Value value) {
     auto js_point_class_id = Runtime::GetInstance().ClassId<T>();
     void *s = JS_GetOpaque2(cobj(), value.cobj(), js_point_class_id);
 
@@ -163,7 +171,7 @@ public:
 
   friend class ContextDeleter;
 
-private:
+ private:
   JSContext *cobj_;
 
   Value WrapValue(JSValue v);
@@ -171,14 +179,14 @@ private:
 };
 
 class ContextDeleter final {
-public:
+ public:
   void operator()(Context *ctx) const;
 };
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps
 
 std::ostream &operator<<(std::ostream &os,
                          const quickps::quickjs::ContextProvider &ctx);
 
-#endif // QUICKPS_QUICKJSMM_CONTEXT_H_
+#endif  // QUICKPS_QUICKJSMM_CONTEXT_H_

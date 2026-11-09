@@ -4,8 +4,8 @@ namespace {
 constexpr uint8_t kByteCode[] = {
 #embed "paper.bc"
 };
-} // namespace
+}  // namespace
 
 namespace paper {
 std::span<const uint8_t> GetByteCode() { return kByteCode; }
-} // namespace paper
+}  // namespace paper

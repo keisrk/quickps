@@ -79,7 +79,7 @@ qjs::Value StyleToJSValue(qjs::Context &ctx, const Style &style) {
   return CreateStyleObject(ctx, style);
 }
 
-} // namespace
+}  // namespace
 
 qjs::Value GetFillStyle(qjs::Context &ctx, Context *c2d) {
   return StyleToJSValue(ctx, c2d->GetFillStyle());
@@ -199,8 +199,7 @@ qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
   log::debug("save");
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Save();
   return qjs::Value::GetUndefined();
@@ -210,8 +209,7 @@ qjs::Value Restore(qjs::Context &, Context *c2d, qjs::ValueIter first,
                    qjs::ValueIter last) {
   log::debug("restore");
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Restore();
   return qjs::Value::GetUndefined();
@@ -222,8 +220,7 @@ qjs::Value Scale(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Scale(x, y);
   return qjs::Value::GetUndefined();
@@ -233,8 +230,7 @@ qjs::Value Rotate(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
   auto rad = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Rotate(rad);
   return qjs::Value::GetUndefined();
@@ -245,8 +241,7 @@ qjs::Value Translate(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Translate(x, y);
   return qjs::Value::GetUndefined();
@@ -261,8 +256,7 @@ qjs::Value Transform(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto e = first++->Get<double>(ctx);
   auto f = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Transform(a, b, c, d, e, f);
   return qjs::Value::GetUndefined();
@@ -277,8 +271,7 @@ qjs::Value SetTransform(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto e = first++->Get<double>(ctx);
   auto f = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->SetTransform(a, b, c, d, e, f);
   return qjs::Value::GetUndefined();
@@ -291,8 +284,7 @@ qjs::Value CreateLinearGradient(qjs::Context &ctx, Context *c2d,
   auto x1 = first++->Get<double>(ctx);
   auto y1 = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   return CreateStyleObject(ctx, c2d->CreateLinearGradient(x0, y0, x1, y1));
 }
@@ -306,8 +298,7 @@ qjs::Value CreateRadialGradient(qjs::Context &ctx, Context *c2d,
   auto y1 = first++->Get<double>(ctx);
   auto r1 = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   return CreateStyleObject(ctx,
                            c2d->CreateRadialGradient(x0, y0, r0, x1, y1, r1));
@@ -315,8 +306,7 @@ qjs::Value CreateRadialGradient(qjs::Context &ctx, Context *c2d,
 
 qjs::Value CreatePattern(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                          qjs::ValueIter last) {
-  if (first == last)
-    throw qjs::Exception();
+  if (first == last) throw qjs::Exception();
 
   auto *image = ctx.GetOpaque<Canvas>(*first++);
   std::string repetition = "repeat";
@@ -330,8 +320,7 @@ qjs::Value CreatePattern(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
     ++first;
   }
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   return CreateStyleObject(ctx, c2d->CreatePattern(*image, repetition));
 }
@@ -345,8 +334,7 @@ qjs::Value ClearRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto width = first++->Get<double>(ctx);
   auto height = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->ClearRect(x, y, width, height);
   return qjs::Value::GetUndefined();
@@ -361,8 +349,7 @@ qjs::Value FillRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto width = first++->Get<double>(ctx);
   auto height = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->FillRect(x, y, width, height);
   return qjs::Value::GetUndefined();
@@ -377,8 +364,7 @@ qjs::Value StrokeRect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto width = first++->Get<double>(ctx);
   auto height = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->StrokeRect(x, y, width, height);
   return qjs::Value::GetUndefined();
@@ -388,8 +374,7 @@ qjs::Value BeginPath(qjs::Context &, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
   log::debug("beginPath");
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->BeginPath();
   return qjs::Value::GetUndefined();
@@ -399,8 +384,7 @@ qjs::Value ClosePath(qjs::Context &, Context *c2d, qjs::ValueIter first,
                      qjs::ValueIter last) {
   log::debug("closePath");
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->ClosePath();
   return qjs::Value::GetUndefined();
@@ -413,8 +397,7 @@ qjs::Value MoveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->MoveTo(x, y);
   return qjs::Value::GetUndefined();
@@ -427,8 +410,7 @@ qjs::Value LineTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->LineTo(x, y);
   return qjs::Value::GetUndefined();
@@ -441,8 +423,7 @@ qjs::Value QuadraticCurveTo(qjs::Context &ctx, Context *c2d,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->QuadraticCurveTo(cpx, cpy, x, y);
   return qjs::Value::GetUndefined();
@@ -459,8 +440,7 @@ qjs::Value BezierCurveTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->BezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
   return qjs::Value::GetUndefined();
@@ -476,8 +456,7 @@ qjs::Value ArcTo(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto y2 = first++->Get<double>(ctx);
   auto radius = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->ArcTo(x1, y1, x2, y2, radius);
   return qjs::Value::GetUndefined();
@@ -492,8 +471,7 @@ qjs::Value Rect(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto width = first++->Get<double>(ctx);
   auto height = first++->Get<double>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Rect(x, y, width, height);
   return qjs::Value::GetUndefined();
@@ -514,8 +492,7 @@ qjs::Value Arc(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
     anticlockwise = first++->Get<bool>(ctx);
   }
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Arc(x, y, radius, start_angle, end_angle, anticlockwise);
   return qjs::Value::GetUndefined();
@@ -527,11 +504,9 @@ qjs::Value Fill(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
   std::optional<std::string> fill_rule;
 
-  if (first != last)
-    fill_rule = first++->Get<std::string>(ctx);
+  if (first != last) fill_rule = first++->Get<std::string>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   if (fill_rule) {
     c2d->Fill(fill_rule.value());
@@ -546,8 +521,7 @@ qjs::Value Stroke(qjs::Context &, Context *c2d, qjs::ValueIter first,
                   qjs::ValueIter last) {
   log::debug("stroke");
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   c2d->Stroke();
   return qjs::Value::GetUndefined();
@@ -559,11 +533,9 @@ qjs::Value Clip(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
   std::optional<std::string> fill_rule;
 
-  if (first != last)
-    fill_rule = first++->Get<std::string>(ctx);
+  if (first != last) fill_rule = first++->Get<std::string>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   if (fill_rule) {
     c2d->Clip(fill_rule.value());
@@ -583,11 +555,9 @@ qjs::Value IsPointInPath(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
-  if (first != last)
-    fill_rule = first++->Get<std::string>(ctx);
+  if (first != last) fill_rule = first++->Get<std::string>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   bool res = false;
   if (fill_rule) {
@@ -643,15 +613,12 @@ qjs::Value PutImageData([[maybe_unused]] qjs::Context &ctx,
 }
 qjs::Value SetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                        qjs::ValueIter last) {
-  if (first == last)
-    throw qjs::Exception();
+  if (first == last) throw qjs::Exception();
 
   auto arr = *first++;
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
-  if (!JS_IsArray(ctx.cobj(), arr.cobj()))
-    throw qjs::Exception();
+  if (!JS_IsArray(ctx.cobj(), arr.cobj())) throw qjs::Exception();
 
   JSValue len_val = JS_GetPropertyStr(ctx.cobj(), arr.cobj(), "length");
   uint32_t len = 0;
@@ -665,8 +632,7 @@ qjs::Value SetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
     double val = 0.0;
     int err = JS_ToFloat64(ctx.cobj(), &val, elem);
     JS_FreeValue(ctx.cobj(), elem);
-    if (err != 0)
-      throw qjs::Exception();
+    if (err != 0) throw qjs::Exception();
     segments.push_back(val);
   }
 
@@ -676,8 +642,7 @@ qjs::Value SetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
 
 qjs::Value GetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                        qjs::ValueIter last) {
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   auto segments = c2d->GetLineDash();
   JSValue arr = JS_NewArray(ctx.cobj());
@@ -729,8 +694,7 @@ qjs::Value GetAttribute(qjs::Context &ctx, Canvas *canvas, qjs::ValueIter first,
                         qjs::ValueIter last) {
   auto attr = first++->Get<std::string>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   auto v = canvas->GetAttribute(attr.c_str());
   return ctx.Get(v);
@@ -740,8 +704,7 @@ qjs::Value HasAttribute(qjs::Context &ctx, Canvas *canvas, qjs::ValueIter first,
                         qjs::ValueIter last) {
   auto attr = first++->Get<std::string>(ctx);
 
-  if (first != last)
-    throw qjs::Exception();
+  if (first != last) throw qjs::Exception();
 
   auto v = canvas->HasAttribute(attr.c_str());
   return ctx.Get(v);
@@ -774,6 +737,6 @@ void SetOwnerDocument([[maybe_unused]] qjs::Context &ctx,
   throw Unimplemented();
 }
 
-} // namespace facade
-} // namespace canvas
-} // namespace quickps
+}  // namespace facade
+}  // namespace canvas
+}  // namespace quickps

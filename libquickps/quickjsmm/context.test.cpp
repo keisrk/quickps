@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/quickjsmm/context.hpp>
 #include <libquickps/quickjsmm/fixture.hpp>
 
@@ -8,7 +9,7 @@ using namespace quickps::quickjs;
 using namespace test;
 
 class QuickJsContextTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override { Runtime::Init(); }
   void TearDown() override { Runtime::Terminate(); }
 };
@@ -88,7 +89,7 @@ TEST_F(QuickJsContextTest, GetSetOpaque) {
 
   JS_SetOpaque(opaque_obj.cobj(), p_ptr.get());
   Point *opaque_ptr = ctx->GetOpaque<Point>(opaque_obj);
-  EXPECT_EQ(p_ptr.release(), opaque_ptr); // Prevent double free of p_ptr
+  EXPECT_EQ(p_ptr.release(), opaque_ptr);  // Prevent double free of p_ptr
 
   // Free resources
   JS_FreeValue(ctx->cobj(), opaque_obj.cobj());
@@ -123,4 +124,4 @@ TEST_F(QuickJsContextTest, PointClassConstruction) {
   JS_FreeValue(ctx->cobj(), instance.cobj());
 }
 
-} // namespace
+}  // namespace

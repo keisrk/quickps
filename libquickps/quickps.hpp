@@ -22,7 +22,7 @@ class PaperScript;
 class PaperCanvasProvider;
 
 class QuickPs {
-public:
+ public:
   void Init();
   void Terminate();
   PaperScope CreatePaperScope();
@@ -32,7 +32,7 @@ public:
   quickjs::Value create_canvas();
   quickjs::RcValue &paper();
 
-private:
+ private:
   std::unique_ptr<quickjs::Context, quickjs::ContextDeleter> ctx_;
   std::optional<quickjs::RcValue> paper_;
   std::optional<quickjs::RcValue> canvas_;
@@ -50,37 +50,37 @@ private:
 };
 
 class PaperScope {
-public:
+ public:
   PaperScope(QuickPs &qps);
   PaperCanvasProvider Inject();
   PaperScript SetUp(PaperCanvas &canvas);
 
-private:
+ private:
   QuickPs &qps_;
 };
 
 class PaperScript {
-public:
+ public:
   PaperScript(QuickPs &qps, quickjs::Value scope);
   PaperExecutable Compile(const char *source);
   PaperExecutable Compile(const std::string &source);
   void Execute(const PaperExecutable &exe);
   std::string ExportSVG();
 
-private:
+ private:
   QuickPs &qps_;
   quickjs::RcValue scope_;
 };
 
 class PaperCanvasProvider {
-public:
+ public:
   PaperCanvasProvider(QuickPs &qps);
   PaperCanvas CreateCanvas(int width, int height);
 
-private:
+ private:
   QuickPs &qps_;
 };
 
-} // namespace quickps
+}  // namespace quickps
 
-#endif // QUICKPS_QUICKPS_H_
+#endif  // QUICKPS_QUICKPS_H_

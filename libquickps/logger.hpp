@@ -5,16 +5,10 @@
 
 namespace quickps {
 
-enum class LogLevel {
-  Debug = 0,
-  Info = 1,
-  Warn = 2,
-  Error = 3,
-  Off = 4
-};
+enum class LogLevel { Debug = 0, Info = 1, Warn = 2, Error = 3, Off = 4 };
 
 class Logger {
-public:
+ public:
   static Logger &instance() {
     static Logger logger;
     return logger;
@@ -23,7 +17,7 @@ public:
   void set_level(LogLevel level) noexcept { level_ = level; }
   LogLevel level() const noexcept { return level_; }
 
-private:
+ private:
   // Default: Warn (silent unless something bad happens)
   LogLevel level_ = LogLevel::Warn;
 };
@@ -86,5 +80,5 @@ inline void error(std::string_view msg) {
   }
 }
 
-} // namespace log
-} // namespace quickps
+}  // namespace log
+}  // namespace quickps

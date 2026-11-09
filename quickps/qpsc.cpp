@@ -1,10 +1,11 @@
+#include <getopt.h>
+
 #include <cstdio>
 #include <fstream>
-#include <getopt.h>
 #include <iostream>
-#include <sstream>
 #include <libquickps/logger.hpp>
 #include <libquickps/quickps.hpp>
+#include <sstream>
 
 namespace {
 using namespace quickps;
@@ -68,7 +69,7 @@ bool Run(std::istream &input_stream, std::filesystem::path &output_path,
   return success;
 }
 
-} // namespace
+}  // namespace
 
 int main(int argc, char **argv) {
   int opt;
@@ -79,30 +80,30 @@ int main(int argc, char **argv) {
 
   while ((opt = getopt_long(argc, argv, "hi:o:s:", options, NULL)) != -1) {
     switch (opt) {
-    case 'i':
-      input_path = optarg;
-      break;
-
-    case 'o':
-      output_path = optarg;
-      break;
-
-    case 's':
-      if (2 == std::sscanf(optarg, "%dx%d", &width, &height) && width > 0 &&
-          height > 0 && width <= 16384 && height <= 16384) {
+      case 'i':
+        input_path = optarg;
         break;
-      } else {
-        [[fallthrough]];
-      }
 
-    case OPT_VERBOSE:
-      quickps::Logger::instance().set_level(quickps::LogLevel::Debug);
-      break;
+      case 'o':
+        output_path = optarg;
+        break;
 
-    case 'h':
-    default:
-      std::cout << desc;
-      exit(EXIT_SUCCESS);
+      case 's':
+        if (2 == std::sscanf(optarg, "%dx%d", &width, &height) && width > 0 &&
+            height > 0 && width <= 16384 && height <= 16384) {
+          break;
+        } else {
+          [[fallthrough]];
+        }
+
+      case OPT_VERBOSE:
+        quickps::Logger::instance().set_level(quickps::LogLevel::Debug);
+        break;
+
+      case 'h':
+      default:
+        std::cout << desc;
+        exit(EXIT_SUCCESS);
     }
   }
 

@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/quickjsmm/context.hpp>
 #include <libquickps/quickjsmm/fixture.hpp>
 namespace {
@@ -7,7 +8,7 @@ using namespace quickps::quickjs;
 using namespace test;
 
 class IsInstanceOfTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override { Runtime::Init(); }
   void TearDown() override { Runtime::Terminate(); }
 };
@@ -38,4 +39,4 @@ TEST_F(IsInstanceOfTest, AllTheWay) {
   }
 }
 
-} // namespace
+}  // namespace

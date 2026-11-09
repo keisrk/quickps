@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/quickjsmm/context.hpp>
 #include <libquickps/quickjsmm/esm.hpp>
 #include <libquickps/quickjsmm/facade.hpp>
@@ -10,7 +11,7 @@ using namespace quickps::quickjs;
 using namespace test;
 
 class QuickJsEsmTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override { Runtime::Init(); }
   void TearDown() override { Runtime::Terminate(); }
 };
@@ -37,4 +38,4 @@ TEST_F(QuickJsEsmTest, AmendMeLater) {
   RcValue v = ctx->Register<Point>(cls);
   EXPECT_NE(&v, nullptr);
 }
-} // namespace
+}  // namespace

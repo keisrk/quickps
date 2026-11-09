@@ -1,5 +1,6 @@
-#include <libquickps/quickps.hpp>
 #include <paperjs/paper.h>
+
+#include <libquickps/quickps.hpp>
 
 namespace quickps {
 
@@ -32,23 +33,19 @@ void QuickPs::LoadContext() {
 void QuickPs::LoadPaper() {
   auto buf = paper::GetByteCode();
   auto module = ctx_->LoadModule(buf);
-  if (module.IsException())
-    throw quickjs::Exception();
+  if (module.IsException()) throw quickjs::Exception();
 
   JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval =
       quickjs::RcValue(*ctx_, JS_EvalFunction(ctx_->cobj(), module.cobj()));
 
-  if (module_eval.IsException())
-    throw quickjs::Exception();
+  if (module_eval.IsException()) throw quickjs::Exception();
 
   auto ns = quickjs::RcValue(*ctx_, JS_GetModuleNamespace(ctx_->cobj(), m));
-  if (ns.IsException())
-    throw quickjs::Exception();
+  if (ns.IsException()) throw quickjs::Exception();
 
   auto paper = ns.Get("default");
-  if (paper.IsException())
-    throw quickjs::Exception();
+  if (paper.IsException()) throw quickjs::Exception();
 
   paper_.emplace(std::move(paper));
 }
@@ -110,8 +107,7 @@ PaperScript PaperScope::SetUp(PaperCanvas &canvas) {
       qps_.ctx(),
       JS_CallConstructor(qps_.ctx().cobj(), scope.cobj(), 0, nullptr));
 
-  if (instance.IsException())
-    throw quickjs::Exception();
+  if (instance.IsException()) throw quickjs::Exception();
 
   auto ret = instance.Invoke("setup", {canvas.value});
   if (ret.IsException()) {
@@ -134,8 +130,7 @@ PaperExecutable PaperScript::Compile(const char *source) {
   auto compiled =
       quickjs::RcValue(qps_.ctx(), engine.Invoke("compile", {ps.value()}));
 
-  if (compiled.IsException())
-    throw quickjs::Exception();
+  if (compiled.IsException()) throw quickjs::Exception();
 
   return PaperExecutable(compiled.Get("code").Take());
 }
@@ -185,8 +180,7 @@ std::string PaperScript::ExportSVG() {
   return ret.value().Get<std::string>(qps_.ctx());
 }
 
-PaperCanvasProvider::PaperCanvasProvider(QuickPs &qps)
-    : qps_(qps) {}
+PaperCanvasProvider::PaperCanvasProvider(QuickPs &qps) : qps_(qps) {}
 
 PaperCanvas PaperCanvasProvider::CreateCanvas(int width, int height) {
   auto create_canvas = qps_.paper().Get("createCanvas");
@@ -199,10 +193,9 @@ PaperCanvas PaperCanvasProvider::CreateCanvas(int width, int height) {
 
   auto canvas = create_canvas.Call(args);
 
-  if (canvas.IsException())
-    throw quickjs::Exception();
+  if (canvas.IsException()) throw quickjs::Exception();
 
   return PaperCanvas(canvas);
 }
 
-} // namespace quickps
+}  // namespace quickps

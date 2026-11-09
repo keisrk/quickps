@@ -25,7 +25,7 @@ struct State final {
   std::string font;
 };
 
-} // namespace canvas
-} // namespace quickps
+}  // namespace canvas
+}  // namespace quickps
 
-#endif // QUICKPS_CANVAS_STATE_H_
+#endif  // QUICKPS_CANVAS_STATE_H_

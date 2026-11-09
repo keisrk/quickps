@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/canvas/context.hpp>
 
 namespace {
@@ -6,7 +7,7 @@ using namespace quickps::canvas;
 namespace qjs = quickps::quickjs;
 
 class CanvasRenderingContext2dTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override { qjs::Runtime::Init(); }
   void TearDown() override { qjs::Runtime::Terminate(); }
 };
@@ -218,10 +219,10 @@ TEST_F(CanvasRenderingContext2dTest, StylesAndCompositingJSInterop) {
             "multiply");
 
   // Linear gradient
-  auto lin_grad =
-      qjs::RcValue(*ctx, c2d.Invoke("createLinearGradient",
-                                    {ctx->Get(0.0), ctx->Get(0.0),
-                                     ctx->Get(100.0), ctx->Get(0.0)}));
+  auto lin_grad = qjs::RcValue(
+      *ctx,
+      c2d.Invoke("createLinearGradient", {ctx->Get(0.0), ctx->Get(0.0),
+                                          ctx->Get(100.0), ctx->Get(0.0)}));
   EXPECT_FALSE(lin_grad.IsException());
   lin_grad.Invoke("addColorStop", {ctx->Get(0.0), ctx->Get("#ff0000")});
   lin_grad.Invoke("addColorStop", {ctx->Get(1.0), ctx->Get("#0000ff")});
@@ -242,11 +243,11 @@ TEST_F(CanvasRenderingContext2dTest, StylesAndCompositingJSInterop) {
   c2d.Set("strokeStyle", rad_grad.Take());
 
   // Pattern
-  auto pat =
-      qjs::RcValue(*ctx, c2d.Invoke("createPattern", {canvas_instance.value(),
-                                                      ctx->Get("repeat")}));
+  auto pat = qjs::RcValue(
+      *ctx, c2d.Invoke("createPattern",
+                       {canvas_instance.value(), ctx->Get("repeat")}));
   EXPECT_FALSE(pat.IsException());
   c2d.Set("fillStyle", pat.Take());
 }
 
-} // namespace
+}  // namespace

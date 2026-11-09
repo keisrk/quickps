@@ -6,8 +6,7 @@ namespace facade {
 using namespace quickps::quickjs;
 
 Value norm(Context &ctx, Point *p, ValueIter first, ValueIter last) {
-  if (first != last)
-    throw Exception();
+  if (first != last) throw Exception();
 
   return ctx.Get(p->norm());
 }
@@ -20,5 +19,5 @@ Value get_y(Context &ctx, Point *p) { return ctx.Get(p->y); }
 
 void set_y(Context &ctx, Point *p, Value v) { return ctx.Set(p->y, v); }
 
-} // namespace facade
-} // namespace test
+}  // namespace facade
+}  // namespace test

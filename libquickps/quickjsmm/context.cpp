@@ -31,8 +31,7 @@ RcValue Context::GetGlobalThis() {
   RcValue global(static_cast<ContextProvider &>(*this),
                  JS_GetGlobalObject(cobj_));
 
-  if (global.IsException())
-    throw Exception();
+  if (global.IsException()) throw Exception();
 
   return global;
 }
@@ -96,7 +95,8 @@ std::unordered_map<std::size_t, JSClassID> Runtime::class_registry_ = {};
 void Runtime::Init() {
   Runtime::cobj_ = JS_NewRuntime();
   Runtime::class_registry_.clear();
-#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
+#if defined(__SANITIZE_ADDRESS__) || \
+    (defined(__has_feature) && __has_feature(address_sanitizer))
   JS_SetMaxStackSize(Runtime::cobj_.value(), 8 * JS_DEFAULT_STACK_SIZE);
 #else
   JS_SetMaxStackSize(Runtime::cobj_.value(), 2 * JS_DEFAULT_STACK_SIZE);
@@ -124,8 +124,8 @@ const std::unique_ptr<Context, ContextDeleter> Runtime::CreateContext() {
                                                   ContextDeleter());
 }
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps
 
 std::ostream &operator<<(std::ostream &os,
                          const quickps::quickjs::ContextProvider &ctx) {
@@ -140,8 +140,7 @@ std::ostream &operator<<(std::ostream &os,
     os << "[exception]\n";
   }
 
-  if (!JS_IsError(ctx_cobj, error))
-    return os;
+  if (!JS_IsError(ctx_cobj, error)) return os;
 
   JSValue val = JS_GetPropertyStr(ctx_cobj, error, "stack");
 

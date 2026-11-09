@@ -2,13 +2,14 @@
 #define QUICKPS_CANVAS_CONTEXT_H_
 
 #include <blend2d/blend2d.h>
+
 #include <exception>
 #include <filesystem>
 #include <libquickps/canvas/style.hpp>
 #include <libquickps/quickjsmm/esm.hpp>
 #include <memory>
 #include <optional>
-#include <string> // Prefer enum ...
+#include <string>  // Prefer enum ...
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -20,7 +21,7 @@ class Unimplemented : public std::exception {};
 class Canvas;
 
 class Context final {
-public:
+ public:
   Context(BLContext ctx);
   BLContext &Impl();
   void Save();
@@ -109,7 +110,7 @@ public:
   int textBaseline;
   int lineDashOffset;
 
-private:
+ private:
   BLContext context_;
   BLPath path_;
   std::optional<BLImage> clip_mask_;
@@ -117,7 +118,7 @@ private:
 };
 
 class Canvas final {
-public:
+ public:
   static quickjs::Entry &CreateCanvas();
   Canvas(int width, int height);
   Canvas(const Canvas &) = delete;
@@ -128,27 +129,29 @@ public:
   bool HasAttribute(const char *attr);
   void Write(std::filesystem::path &png);
 
-private:
+ private:
   BLImage surface_;
 };
 
-} // namespace canvas
+}  // namespace canvas
 
 namespace quickjs {
 
-template <> const Class &GetClass<canvas::Context>();
+template <>
+const Class &GetClass<canvas::Context>();
 
 template <>
 std::unique_ptr<canvas::Context, OpaqueDeleter<canvas::Context>>
 New<canvas::Context>(Context &ctx, ValueIter first, ValueIter last);
 
-template <> const Class &GetClass<canvas::Canvas>();
+template <>
+const Class &GetClass<canvas::Canvas>();
 
 template <>
 std::unique_ptr<canvas::Canvas, OpaqueDeleter<canvas::Canvas>>
 New<canvas::Canvas>(Context &ctx, ValueIter first, ValueIter last);
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps
 
-#endif // QUICKPS_CANVAS_CONTEXT_H_
+#endif  // QUICKPS_CANVAS_CONTEXT_H_

@@ -16,7 +16,7 @@ struct Color final {
   constexpr Color(float r, float g, float b, float a)
       : r(r), g(g), b(b), a(a) {}
 
-private:
+ private:
   static Color FromHsla(float hue, float saturation, float lightness,
                         float alpha);
   static std::optional<Color> FromName(std::string_view str);
@@ -25,7 +25,7 @@ private:
 bool operator==(const Color &, const Color &);
 bool operator!=(const Color &, const Color &);
 
-} // namespace canvas
-} // namespace quickps
+}  // namespace canvas
+}  // namespace quickps
 
-#endif // QUICKPS_CANVAS_COLOR_H_
+#endif  // QUICKPS_CANVAS_COLOR_H_

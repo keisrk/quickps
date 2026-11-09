@@ -1,12 +1,13 @@
 #include <gtest/gtest.h>
-#include <libquickps/quickps.hpp>
 #include <paperjs/paper.h>
+
+#include <libquickps/quickps.hpp>
 
 namespace {
 using namespace quickps;
 
 class E2eTest : public ::testing::Test {
-protected:
+ protected:
   E2eTest() : qps_() {}
   void SetUp() override { qps_.Init(); }
   void TearDown() override { qps_.Terminate(); }
@@ -63,4 +64,4 @@ TEST_F(E2eTest, ExportSvg) {
   EXPECT_NE(svg.find("<path"), std::string::npos);
 }
 
-} // namespace
+}  // namespace

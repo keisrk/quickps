@@ -34,8 +34,7 @@ bool Value::operator==(const Value &other) const {
 
   int64_t tag = JS_VALUE_GET_TAG(cobj_);
 
-  if (tag != JS_VALUE_GET_TAG(other.cobj_))
-    return false;
+  if (tag != JS_VALUE_GET_TAG(other.cobj_)) return false;
 
   if (tag < 0) {
     return JS_VALUE_GET_PTR(cobj_) == JS_VALUE_GET_PTR(other.cobj_);
@@ -119,11 +118,9 @@ bool RcValue::IsException() { return cobj_.value().IsException(); }
 RcValue RcValue::Get(const char *prop) {
   Value property(JS_GetPropertyStr(ctx_.cobj(), cobj(), prop));
 
-  if (property.IsException())
-    throw Exception();
+  if (property.IsException()) throw Exception();
 
-  if (property.IsUndefined())
-    throw Exception();
+  if (property.IsUndefined()) throw Exception();
 
   return RcValue(ctx_, property.cobj());
 }
@@ -138,8 +135,7 @@ Value RcValue::Invoke(const std::string &method,
                       const std::vector<Value> &args) {
   JSAtom js_method = JS_NewAtomLen(ctx_.cobj(), method.c_str(), method.size());
   std::vector<JSValue> js_args({});
-  for (Value v : args)
-    js_args.push_back(v.cobj());
+  for (Value v : args) js_args.push_back(v.cobj());
 
   Value ret(JS_Invoke(ctx_.cobj(), cobj(), js_method, js_args.size(),
                       js_args.data()));
@@ -149,8 +145,7 @@ Value RcValue::Invoke(const std::string &method,
 
 Value RcValue::Call(const std::vector<Value> &args) {
   std::vector<JSValue> js_args({});
-  for (Value v : args)
-    js_args.push_back(v.cobj());
+  for (Value v : args) js_args.push_back(v.cobj());
 
   Value ret(JS_Call(ctx_.cobj(), cobj(), Value::GetNull().cobj(),
                     js_args.size(), js_args.data()));
@@ -183,5 +178,5 @@ const char *RcString::Take() {
   return tmp;
 }
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps

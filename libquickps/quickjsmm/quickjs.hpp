@@ -33,17 +33,17 @@ namespace quickjs {
 class Exception : public std::exception {};
 
 class ContextProvider {
-public:
+ public:
   virtual JSContext *cobj() = 0;
   virtual ~ContextProvider() = default;
 };
 
 class Entry final {
-public:
+ public:
   Entry(JSCFunctionListEntry entry) : cobj_(entry) {}
   JSCFunctionListEntry &cobj() { return cobj_; }
 
-private:
+ private:
   JSCFunctionListEntry cobj_;
 };
 
@@ -55,14 +55,14 @@ struct Class {
 };
 
 class EsModule final {
-public:
+ public:
   const char *name() { return name_.c_str(); }
 
-private:
+ private:
   std::string name_;
 };
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps
 
-#endif // QUICKPS_QUICKJSMM_QUICKJS_H_
+#endif  // QUICKPS_QUICKJSMM_QUICKJS_H_

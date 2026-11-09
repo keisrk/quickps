@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/canvas/color.hpp>
 #include <string>
 
@@ -18,13 +19,11 @@ TEST(ColorTest, CssParserBasic) {
 
 TEST(ColorTest, HexFormats) {
   EXPECT_EQ(Color::FromString("#f00"), Color(1.0f, 0.0f, 0.0f, 1.0f));
-  EXPECT_EQ(Color::FromString("#0F08"),
-            Color(0.0f, 1.0f, 0.0f, 0x88 / 255.0f));
+  EXPECT_EQ(Color::FromString("#0F08"), Color(0.0f, 1.0f, 0.0f, 0x88 / 255.0f));
   EXPECT_EQ(Color::FromString("#0000ff"), Color(0.0f, 0.0f, 1.0f, 1.0f));
   EXPECT_EQ(Color::FromString("#FF000080"),
             Color(1.0f, 0.0f, 0.0f, 0x80 / 255.0f));
-  EXPECT_EQ(Color::FromString("  #AaBbCc  "),
-            Color::Create(0xAABBCCFF));
+  EXPECT_EQ(Color::FromString("  #AaBbCc  "), Color::Create(0xAABBCCFF));
 }
 
 TEST(ColorTest, RgbAndRgbaVariants) {
@@ -78,4 +77,4 @@ TEST(ColorTest, InvalidColors) {
   EXPECT_EQ(Color::FromString("unknowncolor"), Color(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
-} // namespace
+}  // namespace

@@ -6,6 +6,6 @@
 
 namespace paper {
 std::span<const uint8_t> GetByteCode();
-} // namespace paper
+}  // namespace paper
 
-#endif // PAPER_H_
+#endif  // PAPER_H_

@@ -14,29 +14,31 @@ struct Point {
 };
 
 class Edge {
-public:
+ public:
   Point start_;
   Point end_;
 };
 
-} // namespace test
+}  // namespace test
 
 namespace quickps {
 namespace quickjs {
 
 template <>
-std::unique_ptr<test::Point, OpaqueDeleter<test::Point>>
-New<test::Point>(Context &ctx, ValueIter first, ValueIter last);
-
-template <> const Class &GetClass<test::Point>();
+std::unique_ptr<test::Point, OpaqueDeleter<test::Point>> New<test::Point>(
+    Context &ctx, ValueIter first, ValueIter last);
 
 template <>
-std::unique_ptr<test::Edge, OpaqueDeleter<test::Edge>>
-New<test::Edge>(Context &ctx, ValueIter first, ValueIter last);
+const Class &GetClass<test::Point>();
 
-template <> const Class &GetClass<test::Edge>();
+template <>
+std::unique_ptr<test::Edge, OpaqueDeleter<test::Edge>> New<test::Edge>(
+    Context &ctx, ValueIter first, ValueIter last);
 
-} // namespace quickjs
-} // namespace quickps
+template <>
+const Class &GetClass<test::Edge>();
 
-#endif // QUICKPS_QUICKJSMM_FIXTURE_H_
+}  // namespace quickjs
+}  // namespace quickps
+
+#endif  // QUICKPS_QUICKJSMM_FIXTURE_H_

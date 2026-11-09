@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/quickps.hpp>
 
 namespace {
@@ -6,7 +7,7 @@ namespace {
 using namespace quickps;
 
 class QuickPsTest : public ::testing::Test {
-protected:
+ protected:
   QuickPsTest() : qps_() {}
   void SetUp() override { qps_.Init(); }
   void TearDown() override { qps_.Terminate(); }
@@ -29,4 +30,4 @@ TEST_F(QuickPsTest, Init) {
   EXPECT_TRUE(is_instanceof_canvas);
 }
 
-} // namespace
+}  // namespace

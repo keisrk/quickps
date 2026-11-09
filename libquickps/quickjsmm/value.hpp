@@ -12,7 +12,7 @@ namespace quickps {
 namespace quickjs {
 
 class Value final {
-public:
+ public:
   static Value GetNull();
   static Value GetUndefined();
 
@@ -24,7 +24,8 @@ public:
 
   bool IsUndefined();
 
-  template <typename T> bool InstanceOf() {
+  template <typename T>
+  bool InstanceOf() {
     if constexpr (std::is_same<T, std::nullptr_t>::value) {
       return JS_IsNull(cobj_);
     } else if constexpr (std::is_same<T, bool>::value) {
@@ -44,7 +45,8 @@ public:
 
   JSValue &cobj();
 
-  template <typename T> T Get(ContextProvider &ctx) {
+  template <typename T>
+  T Get(ContextProvider &ctx) {
     if constexpr (std::is_same<T, bool>::value) {
       return JS_ToBool(ctx.cobj(), cobj_) == 1;
     } else if constexpr (std::is_same<T, int>::value) {
@@ -76,12 +78,12 @@ public:
     }
   }
 
-private:
+ private:
   JSValue cobj_;
 };
 
 class ValueIter {
-public:
+ public:
   using iterator_category = std::input_iterator_tag;
   using value_type = Value;
   using difference_type = std::ptrdiff_t;
@@ -97,7 +99,7 @@ public:
 
   friend class ArgumentList;
 
-private:
+ private:
   ValueIter(size_t argc, JSValue *js_values, size_t count = 0)
       : argc_(argc), js_values_(js_values), count_(count), current_() {
     if (count_ < argc_) {
@@ -112,20 +114,20 @@ private:
 };
 
 class ArgumentList {
-public:
+ public:
   constexpr ArgumentList(int argc, JSValue *js_values)
       : argc_(argc), js_values_(js_values) {}
 
   ValueIter begin();
   ValueIter end();
 
-private:
+ private:
   int argc_;
   JSValue *js_values_;
 };
 
 class RcValue final {
-public:
+ public:
   RcValue(ContextProvider &ctx, JSValue value);
   RcValue(ContextProvider &ctx, Value value);
   ~RcValue();
@@ -142,13 +144,13 @@ public:
   Value value();
   JSValue cobj();
 
-private:
+ private:
   ContextProvider &ctx_;
   std::optional<Value> cobj_;
 };
 
 class RcString final {
-public:
+ public:
   RcString(ContextProvider &ctx, const char *cobj);
   ~RcString();
   RcString(const RcString &) = delete;
@@ -156,12 +158,12 @@ public:
   const char *cobj();
   const char *Take();
 
-private:
+ private:
   ContextProvider &ctx_;
   std::optional<const char *> cobj_;
 };
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps
 
-#endif // QUICKPS_QUICKJSMM_VALUE_H_
+#endif  // QUICKPS_QUICKJSMM_VALUE_H_

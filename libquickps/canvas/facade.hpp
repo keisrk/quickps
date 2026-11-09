@@ -122,8 +122,8 @@ void SetStyle(qjs::Context &ctx, Canvas *canvas, qjs::Value v);
 qjs::Value GetOwnerDocument(qjs::Context &ctx, Canvas *canvas);
 void SetOwnerDocument(qjs::Context &ctx, Canvas *canvas, qjs::Value v);
 
-} // namespace facade
-} // namespace canvas
-} // namespace quickps
+}  // namespace facade
+}  // namespace canvas
+}  // namespace quickps
 
-#endif // QUICKPS_CANVAS_FACADE_H_
+#endif  // QUICKPS_CANVAS_FACADE_H_

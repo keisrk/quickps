@@ -9,8 +9,9 @@ using namespace test;
 using namespace test::facade;
 
 template <>
-std::unique_ptr<Point, OpaqueDeleter<Point>>
-New<Point>(Context &ctx, ValueIter first, ValueIter last) {
+std::unique_ptr<Point, OpaqueDeleter<Point>> New<Point>(Context &ctx,
+                                                        ValueIter first,
+                                                        ValueIter last) {
   auto x = first++->Get<double>(ctx);
   auto y = first++->Get<double>(ctx);
 
@@ -21,7 +22,8 @@ New<Point>(Context &ctx, ValueIter first, ValueIter last) {
   return Runtime::GetInstance().Ctor<Point>(x, y);
 }
 
-template <> const Class &GetClass<Point>() {
+template <>
+const Class &GetClass<Point>() {
   static Class kClass =
       ClassBuilder<Point>("Point")
           .Constructor<New<Point>>(2)
@@ -44,8 +46,8 @@ template <> const Class &GetClass<Point>() {
 template <>
 std::unique_ptr<Edge, OpaqueDeleter<Edge>> New<Edge>(Context &, ValueIter first,
                                                      ValueIter last) {
-  first++; //->GetOpaque<Point>(ctx);
-  first++; //->GetOpaque<Point>(ctx);
+  first++;  //->GetOpaque<Point>(ctx);
+  first++;  //->GetOpaque<Point>(ctx);
 
   if (first != last) {
     throw Exception();
@@ -54,5 +56,5 @@ std::unique_ptr<Edge, OpaqueDeleter<Edge>> New<Edge>(Context &, ValueIter first,
   throw Exception();
 }
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps

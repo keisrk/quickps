@@ -17,5 +17,5 @@ Style::Style(const BLGradient &gradient) : value(gradient) {}
 
 Style::Style(const BLPattern &pattern) : value(pattern) {}
 
-} // namespace canvas
-} // namespace quickps
+}  // namespace canvas
+}  // namespace quickps

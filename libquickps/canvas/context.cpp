@@ -70,7 +70,7 @@ void DrawWithClipMask(BLContext &ctx, const std::optional<BLImage> &clip_mask,
   ctx.restore();
 }
 
-} // namespace
+}  // namespace
 
 Context::Context(BLContext ctx) : context_(std::move(ctx)) {
   Impl().set_fill_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
@@ -160,16 +160,14 @@ void Context::ClearRect(double x, double y, double width, double height) {
 }
 
 void Context::FillRect(double x, double y, double width, double height) {
-  if (0 == width || 0 == height)
-    return;
+  if (0 == width || 0 == height) return;
 
   DrawWithClipMask(Impl(), clip_mask_,
                    [&](BLContext &ctx) { ctx.fill_rect(x, y, width, height); });
 }
 
 void Context::StrokeRect(double x, double y, double width, double height) {
-  if (0 == width || 0 == height)
-    return;
+  if (0 == width || 0 == height) return;
 
   DrawWithClipMask(Impl(), clip_mask_, [&](BLContext &ctx) {
     ctx.stroke_rect(x, y, width, height);
@@ -506,12 +504,12 @@ void Context::SetLineWidth(double width) {
 
 std::string Context::GetLineCap() const {
   switch (context_.stroke_start_cap()) {
-  case BL_STROKE_CAP_ROUND:
-    return "round";
-  case BL_STROKE_CAP_SQUARE:
-    return "square";
-  default:
-    return "butt";
+    case BL_STROKE_CAP_ROUND:
+      return "round";
+    case BL_STROKE_CAP_SQUARE:
+      return "square";
+    default:
+      return "butt";
   }
 }
 
@@ -530,12 +528,12 @@ void Context::SetLineCap(const std::string &cap) {
 
 std::string Context::GetLineJoin() const {
   switch (context_.stroke_join()) {
-  case BL_STROKE_JOIN_ROUND:
-    return "round";
-  case BL_STROKE_JOIN_BEVEL:
-    return "bevel";
-  default:
-    return "miter";
+    case BL_STROKE_JOIN_ROUND:
+      return "round";
+    case BL_STROKE_JOIN_BEVEL:
+      return "bevel";
+    default:
+      return "miter";
   }
 }
 
@@ -572,52 +570,52 @@ void Context::SetGlobalAlpha(double alpha) {
 
 std::string Context::GetGlobalCompositeOperation() const {
   switch (context_.comp_op()) {
-  case BL_COMP_OP_SRC_OVER:
-    return "source-over";
-  case BL_COMP_OP_SRC_IN:
-    return "source-in";
-  case BL_COMP_OP_SRC_OUT:
-    return "source-out";
-  case BL_COMP_OP_SRC_ATOP:
-    return "source-atop";
-  case BL_COMP_OP_DST_OVER:
-    return "destination-over";
-  case BL_COMP_OP_DST_IN:
-    return "destination-in";
-  case BL_COMP_OP_DST_OUT:
-    return "destination-out";
-  case BL_COMP_OP_DST_ATOP:
-    return "destination-atop";
-  case BL_COMP_OP_PLUS:
-    return "lighter";
-  case BL_COMP_OP_SRC_COPY:
-    return "copy";
-  case BL_COMP_OP_XOR:
-    return "xor";
-  case BL_COMP_OP_MULTIPLY:
-    return "multiply";
-  case BL_COMP_OP_SCREEN:
-    return "screen";
-  case BL_COMP_OP_OVERLAY:
-    return "overlay";
-  case BL_COMP_OP_DARKEN:
-    return "darken";
-  case BL_COMP_OP_LIGHTEN:
-    return "lighten";
-  case BL_COMP_OP_COLOR_DODGE:
-    return "color-dodge";
-  case BL_COMP_OP_COLOR_BURN:
-    return "color-burn";
-  case BL_COMP_OP_HARD_LIGHT:
-    return "hard-light";
-  case BL_COMP_OP_SOFT_LIGHT:
-    return "soft-light";
-  case BL_COMP_OP_DIFFERENCE:
-    return "difference";
-  case BL_COMP_OP_EXCLUSION:
-    return "exclusion";
-  default:
-    return "source-over";
+    case BL_COMP_OP_SRC_OVER:
+      return "source-over";
+    case BL_COMP_OP_SRC_IN:
+      return "source-in";
+    case BL_COMP_OP_SRC_OUT:
+      return "source-out";
+    case BL_COMP_OP_SRC_ATOP:
+      return "source-atop";
+    case BL_COMP_OP_DST_OVER:
+      return "destination-over";
+    case BL_COMP_OP_DST_IN:
+      return "destination-in";
+    case BL_COMP_OP_DST_OUT:
+      return "destination-out";
+    case BL_COMP_OP_DST_ATOP:
+      return "destination-atop";
+    case BL_COMP_OP_PLUS:
+      return "lighter";
+    case BL_COMP_OP_SRC_COPY:
+      return "copy";
+    case BL_COMP_OP_XOR:
+      return "xor";
+    case BL_COMP_OP_MULTIPLY:
+      return "multiply";
+    case BL_COMP_OP_SCREEN:
+      return "screen";
+    case BL_COMP_OP_OVERLAY:
+      return "overlay";
+    case BL_COMP_OP_DARKEN:
+      return "darken";
+    case BL_COMP_OP_LIGHTEN:
+      return "lighten";
+    case BL_COMP_OP_COLOR_DODGE:
+      return "color-dodge";
+    case BL_COMP_OP_COLOR_BURN:
+      return "color-burn";
+    case BL_COMP_OP_HARD_LIGHT:
+      return "hard-light";
+    case BL_COMP_OP_SOFT_LIGHT:
+      return "soft-light";
+    case BL_COMP_OP_DIFFERENCE:
+      return "difference";
+    case BL_COMP_OP_EXCLUSION:
+      return "exclusion";
+    default:
+      return "source-over";
   }
 }
 
@@ -687,13 +685,14 @@ quickjs::Entry &Canvas::CreateCanvas() {
   return kEntry;
 }
 
-} // namespace canvas
+}  // namespace canvas
 
 namespace quickjs {
 
 using namespace canvas::facade;
 
-template <> const Class &GetClass<canvas::Context>() {
+template <>
+const Class &GetClass<canvas::Context>() {
   static Class kClass =
       ClassBuilder<canvas::Context>("CanvasRenderingContext2D")
           .Constructor<New<canvas::Context>>(1)
@@ -871,7 +870,8 @@ New<canvas::Context>(Context &ctx, ValueIter first, ValueIter last) {
   return Runtime::GetInstance().Ctor<canvas::Context>(canvas->CreateContext());
 }
 
-template <> const Class &GetClass<canvas::Canvas>() {
+template <>
+const Class &GetClass<canvas::Canvas>() {
   static Class kClass = ClassBuilder<canvas::Canvas>("HTMLCanvasElement")
                             .Constructor<New<canvas::Canvas>>(3)
                             .Proto(EntryBuilder<canvas::Canvas>()
@@ -934,5 +934,5 @@ New<canvas::Canvas>(Context &ctx, ValueIter first, ValueIter last) {
   return Runtime::GetInstance().Ctor<canvas::Canvas>(width, height);
 }
 
-} // namespace quickjs
-} // namespace quickps
+}  // namespace quickjs
+}  // namespace quickps

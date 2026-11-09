@@ -14,7 +14,7 @@ void set_x(Context &ctx, Point *p, Value v);
 Value get_y(Context &ctx, Point *p);
 void set_y(Context &ctx, Point *p, Value v);
 
-} // namespace facade
-} // namespace test
+}  // namespace facade
+}  // namespace test
 
-#endif // QUICKPS_QUICKJSMM_FACADE_H_
+#endif  // QUICKPS_QUICKJSMM_FACADE_H_

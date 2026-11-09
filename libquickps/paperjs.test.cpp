@@ -1,14 +1,15 @@
-#include <array>
 #include <gtest/gtest.h>
-#include <libquickps/quickjsmm/context.hpp>
 #include <paperjs/paper.h>
+
+#include <array>
+#include <libquickps/quickjsmm/context.hpp>
 
 namespace {
 
 using namespace quickps::quickjs;
 
 class PaperJsTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override { Runtime::Init(); }
   void TearDown() override { Runtime::Terminate(); }
 };
@@ -52,8 +53,7 @@ TEST_F(PaperJsTest, PaperScope) {
   auto ns = Value(JS_GetModuleNamespace(ctx->cobj(), m));
   EXPECT_FALSE(ns.IsException());
 
-  auto paper =
-      Value(JS_GetPropertyStr(ctx->cobj(), ns.cobj(), "default"));
+  auto paper = Value(JS_GetPropertyStr(ctx->cobj(), ns.cobj(), "default"));
   EXPECT_FALSE(paper.IsException());
   EXPECT_EQ(JS_VALUE_GET_TAG(paper.cobj()), JS_TAG_OBJECT);
 
@@ -97,8 +97,7 @@ TEST_F(PaperJsTest, PaperScript) {
   auto ns = Value(JS_GetModuleNamespace(ctx->cobj(), m));
   EXPECT_FALSE(ns.IsException());
 
-  auto paper =
-      Value(JS_GetPropertyStr(ctx->cobj(), ns.cobj(), "default"));
+  auto paper = Value(JS_GetPropertyStr(ctx->cobj(), ns.cobj(), "default"));
   EXPECT_FALSE(paper.IsException());
   EXPECT_EQ(JS_VALUE_GET_TAG(paper.cobj()), JS_TAG_OBJECT);
 
@@ -124,4 +123,4 @@ TEST_F(PaperJsTest, PaperScript) {
   JS_FreeValue(ctx->cobj(), execute.cobj());
 }
 
-} // namespace
+}  // namespace

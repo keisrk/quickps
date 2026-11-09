@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <libquickps/quickjsmm/value.hpp>
 #include <vector>
 
@@ -7,7 +8,7 @@ namespace {
 using namespace quickps::quickjs;
 
 class QuickJsValueTest : public ::testing::Test, public ContextProvider {
-protected:
+ protected:
   QuickJsValueTest() : rt_(JS_NewRuntime()), ctx_(JS_NewContext(this->rt_)) {}
   virtual void SetUp() override {
     js_values_[0] = JS_NewBool(ctx_, true);
@@ -69,4 +70,4 @@ TEST_F(QuickJsValueTest, RcValueAndString) {
   EXPECT_STREQ(cstr.cobj(), "image");
 }
 
-} // namespace
+}  // namespace

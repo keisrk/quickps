@@ -34,10 +34,13 @@ JSValue AddColorStop(JSContext *js_ctx, JSValueConst this_val, int argc,
     auto *style = ctx.GetOpaque<Style>(qjs::Value(this_val));
     double offset = qjs::Value(argv[0]).Get<double>(ctx);
     auto color_str = qjs::Value(argv[1]).Get<std::string>(ctx);
-    auto color = Color::FromString(color_str);
+    auto color = Color::TryParse(color_str);
+    if (!color.has_value()) {
+      throw qjs::Exception();
+    }
     if (auto *grad = std::get_if<BLGradient>(&style->value)) {
-      grad->add_stop(offset,
-                     BLRgba(color.r, color.g, color.b, color.a).to_rgba32());
+      grad->add_stop(
+          offset, BLRgba(color->r, color->g, color->b, color->a).to_rgba32());
     }
     return qjs::Value::GetUndefined().cobj();
   } catch (const std::exception &e) {
@@ -85,8 +88,9 @@ qjs::Value GetFillStyle(qjs::Context &ctx, Context *c2d) {
 void SetFillStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     auto css_color = value.Get<std::string>(ctx);
-    auto color = Color::FromString(css_color);
-    c2d->SetFillStyle(color);
+    if (auto color = Color::TryParse(css_color); color.has_value()) {
+      c2d->SetFillStyle(*color);
+    }
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     EnsureStyleClassRegistered(ctx);
@@ -106,8 +110,9 @@ qjs::Value GetStrokeStyle(qjs::Context &ctx, Context *c2d) {
 void SetStrokeStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     auto css_color = value.Get<std::string>(ctx);
-    auto color = Color::FromString(css_color);
-    c2d->SetStrokeStyle(color);
+    if (auto color = Color::TryParse(css_color); color.has_value()) {
+      c2d->SetStrokeStyle(*color);
+    }
     JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     EnsureStyleClassRegistered(ctx);

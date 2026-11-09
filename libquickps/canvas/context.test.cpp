@@ -201,9 +201,13 @@ TEST_F(CanvasRenderingContext2dTest, StylesAndCompositingJSInterop) {
   c2d.Set("fillStyle", ctx->Get("#ff0000"));
   EXPECT_EQ(c2d.Get("fillStyle").value().Get<std::string>(*ctx), "#ff0000");
 
-  c2d.Set("strokeStyle", ctx->Get("rgba(0, 255, 0, 128)"));
+  // Invalid color should be ignored and keep previous fillStyle
+  c2d.Set("fillStyle", ctx->Get("not-a-valid-color"));
+  EXPECT_EQ(c2d.Get("fillStyle").value().Get<std::string>(*ctx), "#ff0000");
+
+  c2d.Set("strokeStyle", ctx->Get("rgba(0, 255, 0, 0.5)"));
   EXPECT_EQ(c2d.Get("strokeStyle").value().Get<std::string>(*ctx),
-            "rgba(0, 255, 0, 0.501961)");
+            "rgba(0, 255, 0, 0.5)");
 
   // globalAlpha and globalCompositeOperation
   c2d.Set("globalAlpha", ctx->Get(0.75));

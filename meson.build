@@ -14,7 +14,7 @@ project(
     ],
 )
 
-add_project_arguments(['-stdlib=libc++'], language: 'cpp')
+add_project_arguments(['-stdlib=libc++', '-D_LIBCPP_REGEX'], language: 'cpp')
 add_project_link_arguments(['-stdlib=libc++'], language: 'cpp')
 
 blend2d_dep = dependency('blend2d')

@@ -250,4 +250,110 @@ TEST_F(CanvasRenderingContext2dTest, StylesAndCompositingJSInterop) {
   c2d.Set("fillStyle", pat.Take());
 }
 
+TEST_F(CanvasRenderingContext2dTest, FontStateMeasureFillAndStrokeText) {
+  const auto &ctx = qjs::Runtime::CreateContext();
+  auto canvas_ctor = ctx->Register<Canvas>(qjs::GetClass<Canvas>());
+  ctx->Register<Context>(qjs::GetClass<Context>());
+
+  JSValue args[3] = {ctx->Get(200).cobj(), ctx->Get(100).cobj(),
+                     ctx->Get("image").cobj()};
+  auto canvas_instance = qjs::RcValue(
+      *ctx, JS_CallConstructor(ctx->cobj(), canvas_ctor.cobj(), 3, &args[0]));
+  auto c2d = qjs::RcValue(
+      *ctx, canvas_instance.Invoke("getContext", {ctx->Get("2d")}));
+
+  // Default text state
+  EXPECT_EQ(c2d.Get("font").value().Get<std::string>(*ctx), "10px sans-serif");
+  EXPECT_EQ(c2d.Get("textAlign").value().Get<std::string>(*ctx), "start");
+  EXPECT_EQ(c2d.Get("textBaseline").value().Get<std::string>(*ctx),
+            "alphabetic");
+  EXPECT_EQ(c2d.Get("direction").value().Get<std::string>(*ctx), "ltr");
+  EXPECT_EQ(c2d.Get("letterSpacing").value().Get<std::string>(*ctx), "0px");
+
+  // Save/restore text state
+  c2d.Invoke("save", {});
+  c2d.Set("font", ctx->Get("bold 36px \"ABeeZee\", sans-serif"));
+  c2d.Set("textAlign", ctx->Get("center"));
+  c2d.Set("textBaseline", ctx->Get("middle"));
+  c2d.Set("direction", ctx->Get("rtl"));
+  c2d.Set("letterSpacing", ctx->Get("0.1em"));
+
+  EXPECT_EQ(c2d.Get("font").value().Get<std::string>(*ctx),
+            "bold 36px \"ABeeZee\", sans-serif");
+  EXPECT_EQ(c2d.Get("textAlign").value().Get<std::string>(*ctx), "center");
+  EXPECT_EQ(c2d.Get("textBaseline").value().Get<std::string>(*ctx), "middle");
+  EXPECT_EQ(c2d.Get("direction").value().Get<std::string>(*ctx), "rtl");
+  EXPECT_EQ(c2d.Get("letterSpacing").value().Get<std::string>(*ctx), "0.1em");
+
+  // Invalid font assignment is ignored
+  c2d.Set("font", ctx->Get("not-a-valid-font"));
+  EXPECT_EQ(c2d.Get("font").value().Get<std::string>(*ctx),
+            "bold 36px \"ABeeZee\", sans-serif");
+
+  c2d.Invoke("restore", {});
+  EXPECT_EQ(c2d.Get("font").value().Get<std::string>(*ctx), "10px sans-serif");
+  EXPECT_EQ(c2d.Get("textAlign").value().Get<std::string>(*ctx), "start");
+  EXPECT_EQ(c2d.Get("textBaseline").value().Get<std::string>(*ctx),
+            "alphabetic");
+  EXPECT_EQ(c2d.Get("direction").value().Get<std::string>(*ctx), "ltr");
+  EXPECT_EQ(c2d.Get("letterSpacing").value().Get<std::string>(*ctx), "0px");
+
+  // measureText scales with font size
+  c2d.Set("font", ctx->Get("20px ABeeZee"));
+  auto m20 = qjs::RcValue(*ctx, c2d.Invoke("measureText", {ctx->Get("Hello")}));
+  ASSERT_FALSE(m20.IsException());
+  double w20 = m20.Get("width").value().Get<double>(*ctx);
+  double asc20 = m20.Get("fontBoundingBoxAscent").value().Get<double>(*ctx);
+  double desc20 = m20.Get("fontBoundingBoxDescent").value().Get<double>(*ctx);
+  EXPECT_GT(w20, 0.0);
+  EXPECT_GT(asc20, 0.0);
+  EXPECT_GT(desc20, 0.0);
+
+  c2d.Set("font", ctx->Get("40px ABeeZee"));
+  auto m40 = qjs::RcValue(*ctx, c2d.Invoke("measureText", {ctx->Get("Hello")}));
+  double w40 = m40.Get("width").value().Get<double>(*ctx);
+  EXPECT_NEAR(w40, w20 * 2.0, 1.0);
+
+  // strokeText renders stroked glyph outlines with strokeStyle & lineWidth
+  c2d.Set("strokeStyle", ctx->Get("#00ff00"));
+  c2d.Set("lineWidth", ctx->Get(3.0));
+  auto stroke_ret =
+      c2d.Invoke("strokeText", {ctx->Get("H"), ctx->Get(20.0), ctx->Get(60.0)});
+  EXPECT_FALSE(stroke_ret.IsException());
+
+  auto *raw_canvas = ctx->GetOpaque<Canvas>(canvas_instance.value());
+  BLImageData data{};
+  ASSERT_EQ(raw_canvas->Impl().get_data(&data), BL_SUCCESS);
+  const auto *pixels = static_cast<const uint32_t *>(data.pixel_data);
+  const auto stride = data.stride / sizeof(uint32_t);
+
+  size_t green_pixels = 0;
+  for (int y = 0; y < 100; ++y) {
+    for (int x = 0; x < 200; ++x) {
+      uint32_t px = pixels[y * stride + x];
+      if (((px >> 8) & 0xFFU) > 0 && ((px >> 16) & 0xFFU) == 0) {
+        ++green_pixels;
+      }
+    }
+  }
+  EXPECT_GT(green_pixels, 20U);
+
+  // fillText renders filled glyph interior with fillStyle
+  c2d.Set("fillStyle", ctx->Get("#ff0000"));
+  auto fill_ret =
+      c2d.Invoke("fillText", {ctx->Get("H"), ctx->Get(100.0), ctx->Get(60.0)});
+  EXPECT_FALSE(fill_ret.IsException());
+
+  size_t red_pixels = 0;
+  for (int y = 0; y < 100; ++y) {
+    for (int x = 0; x < 200; ++x) {
+      uint32_t px = pixels[y * stride + x];
+      if (((px >> 16) & 0xFFU) > 0 && ((px >> 8) & 0xFFU) == 0) {
+        ++red_pixels;
+      }
+    }
+  }
+  EXPECT_GT(red_pixels, 20U);
+}
+
 }  // namespace

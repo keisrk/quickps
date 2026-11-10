@@ -5,12 +5,15 @@
 
 #include <exception>
 #include <filesystem>
+#include <libquickps/canvas/font.hpp>
 #include <libquickps/canvas/style.hpp>
 #include <libquickps/quickjsmm/esm.hpp>
 #include <memory>
 #include <optional>
 #include <string>  // Prefer enum ...
 #include <type_traits>
+#include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -19,6 +22,36 @@ namespace canvas {
 
 class Unimplemented : public std::exception {};
 class Canvas;
+
+struct TextMetricsResult {
+  double width = 0.0;
+  double actual_bounding_box_left = 0.0;
+  double actual_bounding_box_right = 0.0;
+  double actual_bounding_box_ascent = 0.0;
+  double actual_bounding_box_descent = 0.0;
+  double font_bounding_box_ascent = 0.0;
+  double font_bounding_box_descent = 0.0;
+  double em_height_ascent = 0.0;
+  double em_height_descent = 0.0;
+};
+
+struct TextState {
+  std::string font_str = "10px sans-serif";
+  ParsedFontSpec font_spec{
+      .style = BL_FONT_STYLE_NORMAL,
+      .weight = BL_FONT_WEIGHT_NORMAL,
+      .stretch = BL_FONT_STRETCH_NORMAL,
+      .small_caps = false,
+      .size_px = 10.0f,
+      .families = {"sans-serif"},
+  };
+  BLFont font;
+  std::string text_align = "start";
+  std::string text_baseline = "alphabetic";
+  std::string direction = "ltr";
+  std::string letter_spacing_str = "0px";
+  double letter_spacing_px = 0.0;
+};
 
 class Context final {
  public:
@@ -59,9 +92,11 @@ class Context final {
   void Clip(const std::string &fill_rule);
   bool IsPointInPath(double x, double y);
   bool IsPointInPath(double x, double y, const std::string &fill_rule);
-  void FillText(double text, double x, double y, double maxWidth);
-  void StrokeText(double text, double x, double y, double maxWidth);
-  void MeasureText(double text);
+  void FillText(const std::string &text, double x, double y,
+                std::optional<double> max_width = std::nullopt);
+  void StrokeText(const std::string &text, double x, double y,
+                  std::optional<double> max_width = std::nullopt);
+  TextMetricsResult MeasureText(const std::string &text);
   void DrawImage(double image, double dx, double dy);
   void DrawImage(double image, double dx, double dy, double dw, double dh);
   void DrawImage(double image, double sx, double sy, double sw, double sh,
@@ -88,6 +123,16 @@ class Context final {
   void SetGlobalAlpha(double alpha);
   std::string GetGlobalCompositeOperation() const;
   void SetGlobalCompositeOperation(const std::string &op);
+  std::string GetFont() const;
+  void SetFont(const std::string &font);
+  std::string GetTextAlign() const;
+  void SetTextAlign(const std::string &align);
+  std::string GetTextBaseline() const;
+  void SetTextBaseline(const std::string &baseline);
+  std::string GetDirection() const;
+  void SetDirection(const std::string &dir);
+  std::string GetLetterSpacing() const;
+  void SetLetterSpacing(const std::string &spacing);
   Style GetFillStyle();
   void SetFillStyle(const Style &);
   void SetFillStyle(const Color &);
@@ -105,16 +150,19 @@ class Context final {
   double shadowOffsetY = 0.0;
   double shadowBlur = 0.0;
   std::array<int, 4> shadowColor = {0, 0, 0, 0};
-  int font;
-  int textAlign;
-  int textBaseline;
   int lineDashOffset;
 
  private:
+  const BLFont &EnsureFontResolved();
+
   BLContext context_;
   BLPath path_;
   std::optional<BLImage> clip_mask_;
   std::vector<std::optional<BLImage>> clip_stack_;
+  TextState text_state_;
+  std::vector<TextState> text_state_stack_;
+  std::unordered_map<std::string, std::pair<ParsedFontSpec, BLFont>>
+      font_cache_;
 };
 
 class Canvas final {

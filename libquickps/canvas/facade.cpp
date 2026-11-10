@@ -195,6 +195,61 @@ void SetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d,
   JS_DupValue(ctx.cobj(), value.cobj());
 }
 
+qjs::Value GetFont(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetFont());
+}
+
+void SetFont(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetFont(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetTextAlign(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetTextAlign());
+}
+
+void SetTextAlign(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetTextAlign(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetTextBaseline(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetTextBaseline());
+}
+
+void SetTextBaseline(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetTextBaseline(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetDirection(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetDirection());
+}
+
+void SetDirection(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetDirection(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
+qjs::Value GetLetterSpacing(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetLetterSpacing());
+}
+
+void SetLetterSpacing(qjs::Context &ctx, Context *c2d, qjs::Value value) {
+  if (value.InstanceOf<std::string>()) {
+    c2d->SetLetterSpacing(value.Get<std::string>(ctx));
+  }
+  JS_DupValue(ctx.cobj(), value.cobj());
+}
+
 qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
                 qjs::ValueIter last) {
   log::debug("save");
@@ -569,23 +624,69 @@ qjs::Value IsPointInPath(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   return ctx.Get(res);
 }
 
-qjs::Value FillText([[maybe_unused]] qjs::Context &ctx,
-                    [[maybe_unused]] Context *c2d,
-                    [[maybe_unused]] qjs::ValueIter first,
-                    [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+qjs::Value FillText(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                    qjs::ValueIter last) {
+  log::debug("fillText");
+
+  auto text = first++->Get<std::string>(ctx);
+  auto x = first++->Get<double>(ctx);
+  auto y = first++->Get<double>(ctx);
+  std::optional<double> max_width;
+  if (first != last) {
+    if (!first->IsUndefined()) {
+      max_width = first->Get<double>(ctx);
+    }
+    ++first;
+  }
+
+  if (first != last) throw qjs::Exception();
+
+  c2d->FillText(text, x, y, max_width);
+  return qjs::Value::GetUndefined();
 }
-qjs::Value StrokeText([[maybe_unused]] qjs::Context &ctx,
-                      [[maybe_unused]] Context *c2d,
-                      [[maybe_unused]] qjs::ValueIter first,
-                      [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+
+qjs::Value StrokeText(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                      qjs::ValueIter last) {
+  log::debug("strokeText");
+
+  auto text = first++->Get<std::string>(ctx);
+  auto x = first++->Get<double>(ctx);
+  auto y = first++->Get<double>(ctx);
+  std::optional<double> max_width;
+  if (first != last) {
+    if (!first->IsUndefined()) {
+      max_width = first->Get<double>(ctx);
+    }
+    ++first;
+  }
+
+  if (first != last) throw qjs::Exception();
+
+  c2d->StrokeText(text, x, y, max_width);
+  return qjs::Value::GetUndefined();
 }
-qjs::Value MeasureText([[maybe_unused]] qjs::Context &ctx,
-                       [[maybe_unused]] Context *c2d,
-                       [[maybe_unused]] qjs::ValueIter first,
-                       [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+
+qjs::Value MeasureText(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
+                       qjs::ValueIter last) {
+  log::debug("measureText");
+
+  auto text = first++->Get<std::string>(ctx);
+  if (first != last) throw qjs::Exception();
+
+  auto metrics = c2d->MeasureText(text);
+  auto obj = ctx.GetObject({});
+  obj.Set("width", ctx.Get(metrics.width));
+  obj.Set("actualBoundingBoxLeft", ctx.Get(metrics.actual_bounding_box_left));
+  obj.Set("actualBoundingBoxRight", ctx.Get(metrics.actual_bounding_box_right));
+  obj.Set("actualBoundingBoxAscent",
+          ctx.Get(metrics.actual_bounding_box_ascent));
+  obj.Set("actualBoundingBoxDescent",
+          ctx.Get(metrics.actual_bounding_box_descent));
+  obj.Set("fontBoundingBoxAscent", ctx.Get(metrics.font_bounding_box_ascent));
+  obj.Set("fontBoundingBoxDescent", ctx.Get(metrics.font_bounding_box_descent));
+  obj.Set("emHeightAscent", ctx.Get(metrics.em_height_ascent));
+  obj.Set("emHeightDescent", ctx.Get(metrics.em_height_descent));
+  return obj.Take();
 }
 qjs::Value DrawImage([[maybe_unused]] qjs::Context &ctx,
                      [[maybe_unused]] Context *c2d,

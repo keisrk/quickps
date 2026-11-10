@@ -85,6 +85,7 @@ void Context::Save() {
     throw quickjs::Exception();
   }
   clip_stack_.push_back(clip_mask_);
+  text_state_stack_.push_back(text_state_);
   Impl().save();
 }
 
@@ -92,6 +93,10 @@ void Context::Restore() {
   if (!clip_stack_.empty()) {
     clip_mask_ = std::move(clip_stack_.back());
     clip_stack_.pop_back();
+  }
+  if (!text_state_stack_.empty()) {
+    text_state_ = std::move(text_state_stack_.back());
+    text_state_stack_.pop_back();
   }
   Impl().restore();
 }
@@ -421,13 +426,190 @@ void Context::SetStrokeStyle(const Color &color) {
   Impl().set_stroke_style(BLRgba(color.r, color.g, color.b, color.a));
 }
 
-void Context::FillText([[maybe_unused]] double text, [[maybe_unused]] double x,
-                       [[maybe_unused]] double y,
-                       [[maybe_unused]] double maxWidth) {}
-void Context::StrokeText([[maybe_unused]] double text,
-                         [[maybe_unused]] double x, [[maybe_unused]] double y,
-                         [[maybe_unused]] double maxWidth) {}
-void Context::MeasureText([[maybe_unused]] double text) {}
+const BLFont &Context::EnsureFontResolved() {
+  if (!text_state_.font.is_valid()) {
+    if (auto it = font_cache_.find(text_state_.font_str);
+        it != font_cache_.end()) {
+      text_state_.font_spec = it->second.first;
+      text_state_.font = it->second.second;
+    } else {
+      text_state_.font =
+          FontRegistry::GetInstance().ResolveFont(text_state_.font_spec);
+      font_cache_.emplace(
+          text_state_.font_str,
+          std::make_pair(text_state_.font_spec, text_state_.font));
+    }
+  }
+  return text_state_.font;
+}
+
+namespace {
+
+struct ShapedText {
+  BLGlyphBuffer gb;
+  BLTextMetrics text_metrics{};
+  BLFontMetrics font_metrics{};
+};
+
+ShapedText ShapeTextRun(const BLFont &font, double letter_spacing_px,
+                        const std::string &text) {
+  ShapedText out;
+  out.font_metrics = font.metrics();
+  if (text.empty()) {
+    return out;
+  }
+
+  out.gb.set_utf8_text(text.data(), text.size());
+  font.shape(out.gb);
+
+  if (letter_spacing_px != 0.0 && out.gb.size() > 0 &&
+      font.matrix().m00 != 0.0) {
+    const int delta_design =
+        static_cast<int>(std::lround(letter_spacing_px / font.matrix().m00));
+    BLGlyphPlacement *placements = out.gb.placement_data();
+    if (placements != nullptr) {
+      for (size_t i = 0; i < out.gb.size(); ++i) {
+        placements[i].advance.x += delta_design;
+      }
+    }
+  }
+
+  font.get_text_metrics(out.gb, out.text_metrics);
+  return out;
+}
+
+BLPoint ComputeTextAlignmentOffset(const TextState &state,
+                                   const BLTextMetrics &tm,
+                                   const BLFontMetrics &fm) {
+  std::string_view align = state.text_align;
+  const bool is_rtl = (state.direction == "rtl");
+  if (align == "start") {
+    align = is_rtl ? "right" : "left";
+  } else if (align == "end") {
+    align = is_rtl ? "left" : "right";
+  }
+
+  double dx = 0.0;
+  if (align == "center") {
+    dx = -0.5 * tm.advance.x;
+  } else if (align == "right") {
+    dx = -tm.advance.x;
+  }
+
+  double dy = 0.0;
+  std::string_view baseline = state.text_baseline;
+  if (baseline == "top") {
+    dy = fm.ascent;
+  } else if (baseline == "hanging") {
+    dy = fm.ascent * 0.8;
+  } else if (baseline == "middle") {
+    dy = 0.5 * (fm.ascent - fm.descent);
+  } else if (baseline == "ideographic" || baseline == "bottom") {
+    dy = -fm.descent;
+  }
+
+  return BLPoint(dx, dy);
+}
+
+}  // namespace
+
+void Context::FillText(const std::string &text, double x, double y,
+                       std::optional<double> max_width) {
+  if (!std::isfinite(x) || !std::isfinite(y)) {
+    return;
+  }
+  if (max_width.has_value()) {
+    if (!std::isfinite(*max_width) || *max_width <= 0.0) {
+      return;
+    }
+  }
+
+  const BLFont &font = EnsureFontResolved();
+  ShapedText shaped = ShapeTextRun(font, text_state_.letter_spacing_px, text);
+  if (shaped.gb.is_empty()) {
+    return;
+  }
+
+  const BLPoint offset = ComputeTextAlignmentOffset(
+      text_state_, shaped.text_metrics, shaped.font_metrics);
+  const double scale_x =
+      (max_width.has_value() && shaped.text_metrics.advance.x > *max_width &&
+       shaped.text_metrics.advance.x > 0.0)
+          ? (*max_width / shaped.text_metrics.advance.x)
+          : 1.0;
+
+  DrawWithClipMask(Impl(), clip_mask_, [&](BLContext &ctx) {
+    if (scale_x < 1.0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale_x, 1.0);
+      ctx.fill_glyph_run(offset, font, shaped.gb.glyph_run());
+      ctx.restore();
+    } else {
+      ctx.fill_glyph_run(BLPoint(x + offset.x, y + offset.y), font,
+                         shaped.gb.glyph_run());
+    }
+  });
+}
+
+void Context::StrokeText(const std::string &text, double x, double y,
+                         std::optional<double> max_width) {
+  if (!std::isfinite(x) || !std::isfinite(y)) {
+    return;
+  }
+  if (max_width.has_value()) {
+    if (!std::isfinite(*max_width) || *max_width <= 0.0) {
+      return;
+    }
+  }
+
+  const BLFont &font = EnsureFontResolved();
+  ShapedText shaped = ShapeTextRun(font, text_state_.letter_spacing_px, text);
+  if (shaped.gb.is_empty()) {
+    return;
+  }
+
+  const BLPoint offset = ComputeTextAlignmentOffset(
+      text_state_, shaped.text_metrics, shaped.font_metrics);
+  const double scale_x =
+      (max_width.has_value() && shaped.text_metrics.advance.x > *max_width &&
+       shaped.text_metrics.advance.x > 0.0)
+          ? (*max_width / shaped.text_metrics.advance.x)
+          : 1.0;
+
+  DrawWithClipMask(Impl(), clip_mask_, [&](BLContext &ctx) {
+    if (scale_x < 1.0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale_x, 1.0);
+      ctx.stroke_glyph_run(offset, font, shaped.gb.glyph_run());
+      ctx.restore();
+    } else {
+      ctx.stroke_glyph_run(BLPoint(x + offset.x, y + offset.y), font,
+                           shaped.gb.glyph_run());
+    }
+  });
+}
+
+TextMetricsResult Context::MeasureText(const std::string &text) {
+  const BLFont &font = EnsureFontResolved();
+  ShapedText shaped = ShapeTextRun(font, text_state_.letter_spacing_px, text);
+  const BLFontMetrics &fm = shaped.font_metrics;
+  const BLTextMetrics &tm = shaped.text_metrics;
+  const BLPoint offset = ComputeTextAlignmentOffset(text_state_, tm, fm);
+
+  TextMetricsResult res;
+  res.width = tm.advance.x;
+  res.actual_bounding_box_left = -(tm.bounding_box.x0 + offset.x);
+  res.actual_bounding_box_right = tm.bounding_box.x1 + offset.x;
+  res.actual_bounding_box_ascent = fm.ascent - offset.y;
+  res.actual_bounding_box_descent = fm.descent + offset.y;
+  res.font_bounding_box_ascent = fm.ascent - offset.y;
+  res.font_bounding_box_descent = fm.descent + offset.y;
+  res.em_height_ascent = fm.ascent - offset.y;
+  res.em_height_descent = fm.descent + offset.y;
+  return res;
+}
 void Context::DrawImage([[maybe_unused]] double image,
                         [[maybe_unused]] double dx,
                         [[maybe_unused]] double dy) {}
@@ -649,6 +831,85 @@ void Context::SetGlobalCompositeOperation(const std::string &op) {
   }
 }
 
+std::string Context::GetFont() const { return text_state_.font_str; }
+
+void Context::SetFont(const std::string &font) {
+  if (font == text_state_.font_str) {
+    return;
+  }
+  if (auto it = font_cache_.find(font); it != font_cache_.end()) {
+    text_state_.font_str = font;
+    text_state_.font_spec = it->second.first;
+    text_state_.font = it->second.second;
+    if (auto spacing = TryParseCssLetterSpacing(text_state_.letter_spacing_str,
+                                                text_state_.font_spec.size_px);
+        spacing.has_value()) {
+      text_state_.letter_spacing_px = *spacing;
+    }
+    return;
+  }
+
+  auto spec = TryParseCssFont(font);
+  if (!spec.has_value()) {
+    return;
+  }
+
+  BLFont resolved = FontRegistry::GetInstance().ResolveFont(*spec);
+  text_state_.font_str = font;
+  text_state_.font_spec = *spec;
+  text_state_.font = resolved;
+  font_cache_.emplace(font,
+                      std::make_pair(std::move(*spec), std::move(resolved)));
+
+  if (auto spacing = TryParseCssLetterSpacing(text_state_.letter_spacing_str,
+                                              text_state_.font_spec.size_px);
+      spacing.has_value()) {
+    text_state_.letter_spacing_px = *spacing;
+  }
+}
+
+std::string Context::GetTextAlign() const { return text_state_.text_align; }
+
+void Context::SetTextAlign(const std::string &align) {
+  if (align == "start" || align == "end" || align == "left" ||
+      align == "right" || align == "center") {
+    text_state_.text_align = align;
+  }
+}
+
+std::string Context::GetTextBaseline() const {
+  return text_state_.text_baseline;
+}
+
+void Context::SetTextBaseline(const std::string &baseline) {
+  if (baseline == "top" || baseline == "hanging" || baseline == "middle" ||
+      baseline == "alphabetic" || baseline == "ideographic" ||
+      baseline == "bottom") {
+    text_state_.text_baseline = baseline;
+  }
+}
+
+std::string Context::GetDirection() const { return text_state_.direction; }
+
+void Context::SetDirection(const std::string &dir) {
+  if (dir == "ltr" || dir == "rtl" || dir == "inherit") {
+    text_state_.direction = dir;
+  }
+}
+
+std::string Context::GetLetterSpacing() const {
+  return text_state_.letter_spacing_str;
+}
+
+void Context::SetLetterSpacing(const std::string &spacing) {
+  if (auto px =
+          TryParseCssLetterSpacing(spacing, text_state_.font_spec.size_px);
+      px.has_value()) {
+    text_state_.letter_spacing_str = spacing;
+    text_state_.letter_spacing_px = *px;
+  }
+}
+
 Canvas::Canvas(int width, int height) {
   constexpr int kMaxCanvasDimension = 16384;
   if (width <= 0 || height <= 0 || width > kMaxCanvasDimension ||
@@ -740,6 +1001,31 @@ const Class &GetClass<canvas::Context>() {
                      .Name("globalCompositeOperation")
                      .Getter<GetGlobalCompositeOperation>()
                      .Setter<SetGlobalCompositeOperation>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("font")
+                     .Getter<GetFont>()
+                     .Setter<SetFont>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("textAlign")
+                     .Getter<GetTextAlign>()
+                     .Setter<SetTextAlign>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("textBaseline")
+                     .Getter<GetTextBaseline>()
+                     .Setter<SetTextBaseline>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("direction")
+                     .Getter<GetDirection>()
+                     .Setter<SetDirection>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("letterSpacing")
+                     .Getter<GetLetterSpacing>()
+                     .Setter<SetLetterSpacing>()
                      .Build())
           .Proto(EntryBuilder<canvas::Context>()
                      .Name("setLineDash")
@@ -852,6 +1138,18 @@ const Class &GetClass<canvas::Context>() {
           .Proto(EntryBuilder<canvas::Context>()
                      .Name("isPointInPath")
                      .Method<IsPointInPath>(3)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("fillText")
+                     .Method<FillText>(4)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("strokeText")
+                     .Method<StrokeText>(4)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("measureText")
+                     .Method<MeasureText>(1)
                      .Build())
           .Build();
 

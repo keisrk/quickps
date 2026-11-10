@@ -28,6 +28,16 @@ void SetGlobalAlpha(qjs::Context &ctx, Context *c2d, qjs::Value value);
 qjs::Value GetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d);
 void SetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d,
                                  qjs::Value value);
+qjs::Value GetFont(qjs::Context &ctx, Context *c2d);
+void SetFont(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetTextAlign(qjs::Context &ctx, Context *c2d);
+void SetTextAlign(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetTextBaseline(qjs::Context &ctx, Context *c2d);
+void SetTextBaseline(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetDirection(qjs::Context &ctx, Context *c2d);
+void SetDirection(qjs::Context &ctx, Context *c2d, qjs::Value value);
+qjs::Value GetLetterSpacing(qjs::Context &ctx, Context *c2d);
+void SetLetterSpacing(qjs::Context &ctx, Context *c2d, qjs::Value value);
 qjs::Value GetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                        qjs::ValueIter last);
 qjs::Value Save(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,

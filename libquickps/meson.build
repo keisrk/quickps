@@ -18,6 +18,7 @@ quickps_dep = declare_dependency(
 tests = files(
     'canvas/color.test.cpp',
     'canvas/context.test.cpp',
+    'canvas/font.test.cpp',
     'canvas/state.test.cpp',
     'e2e.test.cpp',
     'isinstanceof.test.cpp',

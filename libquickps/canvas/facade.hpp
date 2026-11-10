@@ -98,27 +98,33 @@ qjs::Value StrokeText(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                       qjs::ValueIter last);
 qjs::Value MeasureText(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                        qjs::ValueIter last);
-qjs::Value DrawImage(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
-                     qjs::ValueIter last);
+qjs::Value DrawImage(qjs::Context &ctx, Context *c2d,
+                     const qjs::ArgumentList &args);
 qjs::Value CreateImageData(qjs::Context &ctx, Context *c2d,
-                           qjs::ValueIter first, qjs::ValueIter last);
-qjs::Value GetImageData(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
-                        qjs::ValueIter last);
-qjs::Value PutImageData(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
-                        qjs::ValueIter last);
+                           const qjs::ArgumentList &args);
+qjs::Value GetImageData(qjs::Context &ctx, Context *c2d,
+                        const qjs::ArgumentList &args);
+qjs::Value PutImageData(qjs::Context &ctx, Context *c2d,
+                        const qjs::ArgumentList &args);
+qjs::Value GetImageSmoothingEnabled(qjs::Context &ctx, Context *c2d);
+void SetImageSmoothingEnabled(qjs::Context &ctx, Context *c2d, qjs::Value val);
+qjs::Value GetImageSmoothingQuality(qjs::Context &ctx, Context *c2d);
+void SetImageSmoothingQuality(qjs::Context &ctx, Context *c2d, qjs::Value val);
 qjs::Value SetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                        qjs::ValueIter last);
 // Canvas
 qjs::Value CreateCanvas(qjs::Context &ctx, qjs::Value this_value,
-                        qjs::ValueIter first, qjs::ValueIter last);
-qjs::Value GetContext(qjs::Context &ctx, Canvas *canvas, qjs::ValueIter first,
-                      qjs::ValueIter last);
+                        const qjs::ArgumentList &args);
+qjs::Value GetContext(qjs::Context &ctx, qjs::Value this_val, Canvas *canvas,
+                      const qjs::ArgumentList &args);
 qjs::Value get_width(qjs::Context &ctx, Canvas *canvas);
-void set_width(qjs::Context &, Canvas *, qjs::Value);
+void set_width(qjs::Context &ctx, Canvas *canvas, qjs::Value val);
 qjs::Value get_height(qjs::Context &ctx, Canvas *canvas);
-void set_height(qjs::Context &, Canvas *, qjs::Value);
-qjs::Value get_type(qjs::Context &ctx, Canvas *);
+void set_height(qjs::Context &ctx, Canvas *canvas, qjs::Value val);
+qjs::Value get_type(qjs::Context &ctx, Canvas *canvas);
 void set_type(qjs::Context &, Canvas *, qjs::Value);
+qjs::Value ToDataURL(qjs::Context &ctx, Canvas *canvas,
+                     const qjs::ArgumentList &args);
 
 qjs::Value GetAttribute(qjs::Context &ctx, Canvas *canvas, qjs::ValueIter first,
                         qjs::ValueIter last);

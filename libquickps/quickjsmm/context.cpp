@@ -104,6 +104,7 @@ void Runtime::Init() {
 }
 
 void Runtime::Terminate() {
+  JS_RunGC(Runtime::cobj_.value());
   JS_FreeRuntime(Runtime::cobj_.value());
   Runtime::cobj_.reset();
   Runtime::class_registry_.clear();

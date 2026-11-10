@@ -20,6 +20,10 @@ extern "C" {
 
 #include <quickjs-libc.h>
 
+inline JSValue GetJsException() { return JS_EXCEPTION; }
+
+inline JSValue GetJsUndefined() { return JS_UNDEFINED; }
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #else

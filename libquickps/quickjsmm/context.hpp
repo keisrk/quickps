@@ -78,6 +78,9 @@ class Runtime final {
 
   template <typename T>
   void Register(const JSClassDef &def) {
+    if (JS_IsRegisteredClass(cobj_.value(), ClassId<T>())) {
+      return;
+    }
     if (int status = JS_NewClass(cobj_.value(), ClassId<T>(), &def);
         status < 0) {
       throw Exception();
@@ -120,7 +123,13 @@ class Context final : public ContextProvider {
   Value LoadModule(std::span<const uint8_t> buf) {
     JSValue result =
         JS_ReadObject(cobj_, buf.data(), buf.size(), JS_READ_OBJ_BYTECODE);
-
+    if (JS_IsException(result)) {
+      return WrapValue(result);
+    }
+    if (JS_ResolveModule(cobj_, result) < 0) {
+      JS_FreeValue(cobj_, result);
+      return WrapValue(GetJsException());
+    }
     return WrapValue(result);
   }
 

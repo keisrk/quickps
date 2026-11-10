@@ -3,6 +3,7 @@ src = files(
     'context.cpp',
     'facade.cpp',
     'font.cpp',
+    'image.cpp',
     'state.cpp',
     'style.cpp',
 )

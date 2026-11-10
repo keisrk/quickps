@@ -23,6 +23,12 @@ namespace canvas {
 class Unimplemented : public std::exception {};
 class Canvas;
 
+struct ImageDataBuffer {
+  int width = 0;
+  int height = 0;
+  std::vector<uint8_t> data;
+};
+
 struct TextMetricsResult {
   double width = 0.0;
   double actual_bounding_box_left = 0.0;
@@ -55,7 +61,14 @@ struct TextState {
 
 class Context final {
  public:
-  Context(BLContext ctx);
+  explicit Context(Canvas *canvas = nullptr);
+  explicit Context(BLContext ctx);
+  ~Context();
+
+  Canvas *canvas() const { return canvas_; }
+  void DetachCanvas() { canvas_ = nullptr; }
+  void Rebind();
+
   BLContext &Impl();
   void Save();
   void Restore();
@@ -97,15 +110,14 @@ class Context final {
   void StrokeText(const std::string &text, double x, double y,
                   std::optional<double> max_width = std::nullopt);
   TextMetricsResult MeasureText(const std::string &text);
-  void DrawImage(double image, double dx, double dy);
-  void DrawImage(double image, double dx, double dy, double dw, double dh);
-  void DrawImage(double image, double sx, double sy, double sw, double sh,
-                 double dx, double dy, double dw, double dh);
-  void CreateImageData(double sw, double sh);
-  void CreateImageData(double imagedata);
-  void GetImageData(double sx, double sy, double sw, double sh);
-  void PutImageData(double imagedata, double dx, double dy, double dirtyX,
-                    double dirtyY, double dirtyWidth, double dirtyHeight);
+  void DrawImage(const BLImage &image, double dx, double dy);
+  void DrawImage(const BLImage &image, const BLRect &dst);
+  void DrawImage(const BLImage &image, const BLRect &dst, const BLRectI &src);
+  ImageDataBuffer GetImageData(int sx, int sy, int sw, int sh);
+  void PutImageData(const ImageDataBuffer &data, int dx, int dy,
+                    const BLRectI &dirty_rect);
+  bool GetImageSmoothingEnabled() const;
+  void SetImageSmoothingEnabled(bool enabled);
   void SetLineDash(double array);
   void SetLineDash(const std::vector<double> &segments);
   std::vector<double> GetLineDash() const;
@@ -155,6 +167,7 @@ class Context final {
  private:
   const BLFont &EnsureFontResolved();
 
+  Canvas *canvas_ = nullptr;
   BLContext context_;
   BLPath path_;
   std::optional<BLImage> clip_mask_;
@@ -163,23 +176,38 @@ class Context final {
   std::vector<TextState> text_state_stack_;
   std::unordered_map<std::string, std::pair<ParsedFontSpec, BLFont>>
       font_cache_;
+  bool image_smoothing_enabled_ = true;
 };
 
 class Canvas final {
  public:
   static quickjs::Entry &CreateCanvas();
   Canvas(int width, int height);
+  ~Canvas();
   Canvas(const Canvas &) = delete;
   Canvas &operator=(const Canvas &) = delete;
   BLImage &Impl();
+  const BLImage &Impl() const;
+  int width() const { return width_; }
+  int height() const { return height_; }
+  void SetWidth(int width);
+  void SetHeight(int height);
+  void RegisterContext(Context *ctx);
+  void UnregisterContext(Context *ctx);
   const Context CreateContext();
   const char *GetAttribute(const char *attr);
   bool HasAttribute(const char *attr);
   void Write(std::filesystem::path &png);
+  std::string ToDataURL(const std::string &type = "image/png");
 
  private:
+  int width_ = 0;
+  int height_ = 0;
   BLImage surface_;
+  Context *active_context_ = nullptr;
 };
+
+void RegisterCanvasModule(quickjs::Context &ctx);
 
 }  // namespace canvas
 

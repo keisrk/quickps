@@ -12,9 +12,16 @@ namespace quickjs {
 using Fun = std::add_pointer<Value(Context &ctx, Value this_val,
                                    ValueIter first, ValueIter last)>::type;
 
+using ArgsFun = std::add_pointer<Value(Context &ctx, Value this_val,
+                                       const ArgumentList &args)>::type;
+
 template <class C>
 using Ctor = typename std::add_pointer<std::unique_ptr<C, OpaqueDeleter<C>>(
     Context &ctx, ValueIter first, ValueIter last)>::type;
+
+template <class C>
+using CtorArgs = typename std::add_pointer<std::unique_ptr<C, OpaqueDeleter<C>>(
+    Context &ctx, const ArgumentList &args)>::type;
 
 template <class C>
 using Get = typename std::add_pointer<Value(Context &ctx, C *instance)>::type;
@@ -26,6 +33,14 @@ using Set =
 template <class C>
 using MethodFun = typename std::add_pointer<Value(
     Context &ctx, C *instance, ValueIter first, ValueIter last)>::type;
+
+template <class C>
+using MethodArgsFun = typename std::add_pointer<Value(
+    Context &ctx, C *instance, const ArgumentList &args)>::type;
+
+template <class C>
+using MethodThisArgsFun = typename std::add_pointer<Value(
+    Context &ctx, Value this_val, C *instance, const ArgumentList &args)>::type;
 
 template <class C = std::nullptr_t>
 class EntryBuilder final {
@@ -60,6 +75,32 @@ class EntryBuilder final {
         Value me(this_val);
         ArgumentList args(argc, argv);
         return F(ctx, me, args.begin(), args.end()).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
+    };
+
+    entry_.u.func.length = argc;
+    entry_.u.func.cproto = JS_CFUNC_generic;
+    entry_.u.func.cfunc.generic = generic;
+    return *this;
+  }
+
+  template <ArgsFun F>
+  EntryBuilder &Func(size_t argc) {
+    static_assert(std::is_same<C, std::nullptr_t>::value);
+    Descriptor(JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    DefType(JS_DEF_CFUNC);
+
+    static JSCFunction *generic = [](auto *js_ctx, auto this_val, int argc,
+                                     auto *argv) {
+      try {
+        Context ctx(js_ctx);
+        Value me(this_val);
+        ArgumentList args(argc, argv);
+        return F(ctx, me, args).cobj();
       } catch (const std::exception &e) {
         return JS_ThrowInternalError(js_ctx, "%s", e.what());
       } catch (...) {
@@ -114,7 +155,7 @@ class EntryBuilder final {
         C *ptr = ctx.GetOpaque<C>(this_val);
         Value v(js_val);
         S(ctx, ptr, v);
-        return js_val;
+        return GetJsUndefined();
       } catch (const std::exception &e) {
         return JS_ThrowInternalError(js_ctx, "%s", e.what());
       } catch (...) {
@@ -155,6 +196,62 @@ class EntryBuilder final {
     return *this;
   }
 
+  template <MethodArgsFun<C> M>
+  EntryBuilder &Method(size_t argc) {
+    static_assert(!std::is_same<C, std::nullptr_t>::value);
+    Descriptor(JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    DefType(JS_DEF_CFUNC);
+
+    static JSCFunction *generic = [](auto *js_ctx, auto js_this_val, int argc,
+                                     auto *argv) {
+      try {
+        Context ctx(js_ctx);
+        Value this_val(js_this_val);
+        ArgumentList args(argc, argv);
+        C *ptr = ctx.GetOpaque<C>(this_val);
+        return M(ctx, ptr, args).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
+    };
+
+    entry_.u.func.length = argc;
+    entry_.u.func.cproto = JS_CFUNC_generic;
+    entry_.u.func.cfunc.generic = generic;
+
+    return *this;
+  }
+
+  template <MethodThisArgsFun<C> M>
+  EntryBuilder &Method(size_t argc) {
+    static_assert(!std::is_same<C, std::nullptr_t>::value);
+    Descriptor(JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    DefType(JS_DEF_CFUNC);
+
+    static JSCFunction *generic = [](auto *js_ctx, auto js_this_val, int argc,
+                                     auto *argv) {
+      try {
+        Context ctx(js_ctx);
+        Value this_val(js_this_val);
+        ArgumentList args(argc, argv);
+        C *ptr = ctx.GetOpaque<C>(this_val);
+        return M(ctx, this_val, ptr, args).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
+    };
+
+    entry_.u.func.length = argc;
+    entry_.u.func.cproto = JS_CFUNC_generic;
+    entry_.u.func.cfunc.generic = generic;
+
+    return *this;
+  }
+
  private:
   JSCFunctionListEntry entry_;
 };
@@ -181,6 +278,29 @@ class ClassBuilder final {
         Value base_val(js_base_val);
         ArgumentList args(argc, argv);
         auto ptr = CTOR(ctx, args.begin(), args.end());
+        return ctx.CreateOpaque<C>(std::move(ptr), base_val).cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(js_ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(js_ctx, "Unknown C++ exception");
+      }
+    };
+
+    ctor_argc_ = argc;
+    ctor_ = ctor;
+
+    return *this;
+  }
+
+  template <CtorArgs<C> CTOR>
+  ClassBuilder &Constructor(size_t argc) {
+    static auto ctor = [](auto *js_ctx, auto js_base_val, int argc,
+                          auto *argv) {
+      try {
+        Context ctx(js_ctx);
+        Value base_val(js_base_val);
+        ArgumentList args(argc, argv);
+        auto ptr = CTOR(ctx, args);
         return ctx.CreateOpaque<C>(std::move(ptr), base_val).cobj();
       } catch (const std::exception &e) {
         return JS_ThrowInternalError(js_ctx, "%s", e.what());

@@ -31,6 +31,7 @@ class QuickPs {
   quickjs::Value c2d();
   quickjs::Value create_canvas();
   quickjs::RcValue &paper();
+  void RegisterImage(std::string_view id, const std::filesystem::path &path);
 
  private:
   std::unique_ptr<quickjs::Context, quickjs::ContextDeleter> ctx_;

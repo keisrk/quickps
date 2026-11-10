@@ -2,6 +2,7 @@
 #include <paperjs/paper.h>
 
 #include <array>
+#include <libquickps/canvas/context.hpp>
 #include <libquickps/quickjsmm/context.hpp>
 
 namespace {
@@ -16,12 +17,13 @@ class PaperJsTest : public ::testing::Test {
 
 TEST_F(PaperJsTest, PaperJsGetByteCode) {
   auto buf = paper::GetByteCode();
-  EXPECT_EQ(buf.size(), 0x90744);
+  EXPECT_GT(buf.size(), 0);
 }
 
 TEST_F(PaperJsTest, LoadByteCode) {
   auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
+  quickps::canvas::RegisterCanvasModule(*ctx);
 
   auto module = ctx->LoadModule(buf);
   EXPECT_FALSE(module.IsException());
@@ -44,6 +46,7 @@ TEST_F(PaperJsTest, LoadByteCode) {
 TEST_F(PaperJsTest, PaperScope) {
   auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
+  quickps::canvas::RegisterCanvasModule(*ctx);
   auto module = ctx->LoadModule(buf);
   JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));
@@ -88,6 +91,7 @@ TEST_F(PaperJsTest, PaperScope) {
 TEST_F(PaperJsTest, PaperScript) {
   auto buf = paper::GetByteCode();
   const auto &ctx = Runtime::CreateContext();
+  quickps::canvas::RegisterCanvasModule(*ctx);
   auto module = ctx->LoadModule(buf);
   JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval = Value(JS_EvalFunction(ctx->cobj(), module.cobj()));

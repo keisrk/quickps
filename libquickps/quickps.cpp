@@ -1,5 +1,6 @@
 #include <paperjs/paper.h>
 
+#include <libquickps/canvas/image.hpp>
 #include <libquickps/quickps.hpp>
 
 namespace quickps {
@@ -12,6 +13,7 @@ PaperExecutable::PaperExecutable(quickjs::Value source_code)
 void QuickPs::Init() {
   quickjs::Runtime::Init();
   LoadContext();
+  canvas::RegisterCanvasModule(*ctx_);
   LoadPaper();
   LoadCanvasClass();
   LoadContext2dClass();
@@ -33,13 +35,17 @@ void QuickPs::LoadContext() {
 void QuickPs::LoadPaper() {
   auto buf = paper::GetByteCode();
   auto module = ctx_->LoadModule(buf);
-  if (module.IsException()) throw quickjs::Exception();
+  if (module.IsException()) {
+    throw quickjs::Exception();
+  }
 
   JSModuleDef *m = static_cast<JSModuleDef *>(module.cobj().u.ptr);
   auto module_eval =
       quickjs::RcValue(*ctx_, JS_EvalFunction(ctx_->cobj(), module.cobj()));
 
-  if (module_eval.IsException()) throw quickjs::Exception();
+  if (module_eval.IsException()) {
+    throw quickjs::Exception();
+  }
 
   auto ns = quickjs::RcValue(*ctx_, JS_GetModuleNamespace(ctx_->cobj(), m));
   if (ns.IsException()) throw quickjs::Exception();
@@ -84,6 +90,30 @@ quickjs::Value QuickPs::c2d() { return c2d_.value().Take(); }
 
 quickjs::Value QuickPs::create_canvas() {
   return create_canvas_.value().Take();
+}
+
+void QuickPs::RegisterImage(std::string_view id,
+                            const std::filesystem::path &path) {
+  auto resolved_path =
+      std::filesystem::exists(path) ? std::filesystem::canonical(path) : path;
+  auto image_ctor = ctx_->GetGlobalThis().Get("self").Get("Image");
+  auto js_img = quickjs::RcValue(
+      *ctx_, JS_CallConstructor(ctx_->cobj(), image_ctor.cobj(), 0, nullptr));
+  if (js_img.IsException()) {
+    throw quickjs::Exception();
+  }
+  auto *img = ctx_->GetOpaque<canvas::Image>(js_img.value());
+  if (!img || !img->LoadFromFile(resolved_path)) {
+    throw std::runtime_error("Failed to load image file: " + path.string());
+  }
+  js_img.Set("id", ctx_->Get(std::string(id)));
+  auto doc = ctx_->GetGlobalThis().Get("self").Get("document");
+  auto ret =
+      doc.Invoke("registerImage", {ctx_->Get(std::string(id)), js_img.value()});
+  if (ret.IsException()) {
+    throw quickjs::Exception();
+  }
+  JS_FreeValue(ctx_->cobj(), ret.cobj());
 }
 
 PaperScope::PaperScope(QuickPs &qps) : qps_(qps) {

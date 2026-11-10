@@ -21,6 +21,9 @@ static const char *desc = R"(qpsc PaperScript compiler
              If absent or specified as "--input -", reads from stdin.
 -o,--output  Output image file path (required). Supported file extensions are .png, .svg.
 -s,--size    Geometry width and height of image. Defaults to "640x480".
+-I,--image   Pre-load image for document.getElementById(id) in the format "id=path"
+             (or "path", where id defaults to the file stem). Can be repeated.
+             Also supports --img:<id>=<path> syntax.
 --verbose    Enable verbose debug logging.
 )";
 
@@ -29,13 +32,40 @@ static const struct option options[] = {
     {"input", required_argument, 0, 'i'},
     {"output", required_argument, 0, 'o'},
     {"size", required_argument, 0, 's'},
+    {"image", required_argument, 0, 'I'},
     {"verbose", no_argument, 0, OPT_VERBOSE},
     {0, 0, 0, 0}};
 
-bool Run(std::istream &input_stream, std::filesystem::path &output_path,
-         int width, int height) {
+void AddImageSpec(
+    std::string_view spec,
+    std::vector<std::pair<std::string, std::filesystem::path>> &images) {
+  auto eq = spec.find('=');
+  if (eq != std::string_view::npos) {
+    std::string id(spec.substr(0, eq));
+    std::filesystem::path path(spec.substr(eq + 1));
+    images.emplace_back(std::move(id), std::move(path));
+  } else {
+    std::filesystem::path path(spec);
+    std::string id = path.stem().string();
+    images.emplace_back(std::move(id), std::move(path));
+  }
+}
+
+bool Run(
+    std::istream &input_stream, std::filesystem::path &output_path, int width,
+    int height,
+    const std::vector<std::pair<std::string, std::filesystem::path>> &images) {
   QuickPs qps;
   qps.Init();
+
+  for (const auto &[id, path] : images) {
+    if (!std::filesystem::exists(path)) {
+      log::error("Image file does not exist: {}", path.string());
+      qps.Terminate();
+      return false;
+    }
+    qps.RegisterImage(id, path);
+  }
 
   bool success = true;
   try {
@@ -77,8 +107,23 @@ int main(int argc, char **argv) {
   int height = 480;
   std::filesystem::path input_path("-");
   std::filesystem::path output_path;
+  std::vector<std::pair<std::string, std::filesystem::path>> images;
 
-  while ((opt = getopt_long(argc, argv, "hi:o:s:", options, NULL)) != -1) {
+  std::vector<char *> filtered_argv;
+  filtered_argv.reserve(argc);
+  for (int i = 0; i < argc; ++i) {
+    std::string_view arg(argv[i]);
+    if (arg.starts_with("--img:")) {
+      auto spec = arg.substr(6);
+      AddImageSpec(spec, images);
+    } else {
+      filtered_argv.push_back(argv[i]);
+    }
+  }
+  int filtered_argc = static_cast<int>(filtered_argv.size());
+
+  while ((opt = getopt_long(filtered_argc, filtered_argv.data(),
+                            "hi:o:s:I:", options, NULL)) != -1) {
     switch (opt) {
       case 'i':
         input_path = optarg;
@@ -86,6 +131,10 @@ int main(int argc, char **argv) {
 
       case 'o':
         output_path = optarg;
+        break;
+
+      case 'I':
+        AddImageSpec(optarg, images);
         break;
 
       case 's':
@@ -113,7 +162,7 @@ int main(int argc, char **argv) {
   }
 
   if (input_path == "-") {
-    if (!Run(std::cin, output_path, width, height)) {
+    if (!Run(std::cin, output_path, width, height, images)) {
       return EXIT_FAILURE;
     }
   } else {
@@ -122,7 +171,7 @@ int main(int argc, char **argv) {
       log::error("Failed to open input file: {}", input_path.string());
       return EXIT_FAILURE;
     }
-    if (!Run(input, output_path, width, height)) {
+    if (!Run(input, output_path, width, height, images)) {
       return EXIT_FAILURE;
     }
   }

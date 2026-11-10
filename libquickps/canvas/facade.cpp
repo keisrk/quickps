@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <iostream>
 #include <libquickps/canvas/facade.hpp>
+#include <libquickps/canvas/image.hpp>
 #include <libquickps/logger.hpp>
 
 namespace quickps {
@@ -91,15 +92,11 @@ void SetFillStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
     if (auto color = Color::TryParse(css_color); color.has_value()) {
       c2d->SetFillStyle(*color);
     }
-    JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     EnsureStyleClassRegistered(ctx);
     if (auto *style = qjs::Runtime::GetInstance().GetOpaque<Style>(value)) {
       c2d->SetFillStyle(*style);
     }
-    JS_DupValue(ctx.cobj(), value.cobj());
-  } else {
-    JS_DupValue(ctx.cobj(), value.cobj());
   }
 }
 
@@ -113,15 +110,11 @@ void SetStrokeStyle(qjs::Context &ctx, Context *c2d, qjs::Value value) {
     if (auto color = Color::TryParse(css_color); color.has_value()) {
       c2d->SetStrokeStyle(*color);
     }
-    JS_DupValue(ctx.cobj(), value.cobj());
   } else if (value.InstanceOf<std::unordered_map<std::string, qjs::Value>>()) {
     EnsureStyleClassRegistered(ctx);
     if (auto *style = qjs::Runtime::GetInstance().GetOpaque<Style>(value)) {
       c2d->SetStrokeStyle(*style);
     }
-    JS_DupValue(ctx.cobj(), value.cobj());
-  } else {
-    JS_DupValue(ctx.cobj(), value.cobj());
   }
 }
 
@@ -131,7 +124,6 @@ qjs::Value GetLineWidth(qjs::Context &ctx, Context *c2d) {
 
 void SetLineWidth(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   c2d->SetLineWidth(value.Get<double>(ctx));
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetLineCap(qjs::Context &ctx, Context *c2d) {
@@ -142,7 +134,6 @@ void SetLineCap(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetLineCap(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetLineJoin(qjs::Context &ctx, Context *c2d) {
@@ -153,7 +144,6 @@ void SetLineJoin(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetLineJoin(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetMiterLimit(qjs::Context &ctx, Context *c2d) {
@@ -162,7 +152,6 @@ qjs::Value GetMiterLimit(qjs::Context &ctx, Context *c2d) {
 
 void SetMiterLimit(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   c2d->SetMiterLimit(value.Get<double>(ctx));
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetLineDashOffset(qjs::Context &ctx, Context *c2d) {
@@ -171,7 +160,6 @@ qjs::Value GetLineDashOffset(qjs::Context &ctx, Context *c2d) {
 
 void SetLineDashOffset(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   c2d->SetLineDashOffset(value.Get<double>(ctx));
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetGlobalAlpha(qjs::Context &ctx, Context *c2d) {
@@ -180,7 +168,6 @@ qjs::Value GetGlobalAlpha(qjs::Context &ctx, Context *c2d) {
 
 void SetGlobalAlpha(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   c2d->SetGlobalAlpha(value.Get<double>(ctx));
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d) {
@@ -192,7 +179,6 @@ void SetGlobalCompositeOperation(qjs::Context &ctx, Context *c2d,
   if (value.InstanceOf<std::string>()) {
     c2d->SetGlobalCompositeOperation(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetFont(qjs::Context &ctx, Context *c2d) {
@@ -203,7 +189,6 @@ void SetFont(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetFont(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetTextAlign(qjs::Context &ctx, Context *c2d) {
@@ -214,7 +199,6 @@ void SetTextAlign(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetTextAlign(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetTextBaseline(qjs::Context &ctx, Context *c2d) {
@@ -225,7 +209,6 @@ void SetTextBaseline(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetTextBaseline(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetDirection(qjs::Context &ctx, Context *c2d) {
@@ -236,7 +219,6 @@ void SetDirection(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetDirection(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value GetLetterSpacing(qjs::Context &ctx, Context *c2d) {
@@ -247,7 +229,6 @@ void SetLetterSpacing(qjs::Context &ctx, Context *c2d, qjs::Value value) {
   if (value.InstanceOf<std::string>()) {
     c2d->SetLetterSpacing(value.Get<std::string>(ctx));
   }
-  JS_DupValue(ctx.cobj(), value.cobj());
 }
 
 qjs::Value Save(qjs::Context &, Context *c2d, qjs::ValueIter first,
@@ -688,30 +669,182 @@ qjs::Value MeasureText(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   obj.Set("emHeightDescent", ctx.Get(metrics.em_height_descent));
   return obj.Take();
 }
-qjs::Value DrawImage([[maybe_unused]] qjs::Context &ctx,
-                     [[maybe_unused]] Context *c2d,
-                     [[maybe_unused]] qjs::ValueIter first,
-                     [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+qjs::Value DrawImage(qjs::Context &ctx, Context *c2d,
+                     const qjs::ArgumentList &args) {
+  if (args.empty()) throw qjs::Exception();
+
+  const BLImage *src_img = nullptr;
+  if (auto *canvas = qjs::Runtime::GetInstance().GetOpaque<Canvas>(args[0])) {
+    src_img = &canvas->Impl();
+  } else if (auto *img =
+                 qjs::Runtime::GetInstance().GetOpaque<Image>(args[0])) {
+    src_img = &img->Impl();
+  }
+
+  if (!src_img) {
+    throw qjs::Exception();
+  }
+  if (src_img->is_empty()) {
+    return qjs::Value::GetUndefined();
+  }
+
+  switch (args.size()) {
+    case 3: {
+      double dx = args.Get<double>(1, ctx);
+      double dy = args.Get<double>(2, ctx);
+      c2d->DrawImage(*src_img, dx, dy);
+      break;
+    }
+    case 5: {
+      double dx = args.Get<double>(1, ctx);
+      double dy = args.Get<double>(2, ctx);
+      double dw = args.Get<double>(3, ctx);
+      double dh = args.Get<double>(4, ctx);
+      c2d->DrawImage(*src_img, BLRect(dx, dy, dw, dh));
+      break;
+    }
+    case 9: {
+      double sx = args.Get<double>(1, ctx);
+      double sy = args.Get<double>(2, ctx);
+      double sw = args.Get<double>(3, ctx);
+      double sh = args.Get<double>(4, ctx);
+      double dx = args.Get<double>(5, ctx);
+      double dy = args.Get<double>(6, ctx);
+      double dw = args.Get<double>(7, ctx);
+      double dh = args.Get<double>(8, ctx);
+      c2d->DrawImage(*src_img, BLRect(dx, dy, dw, dh),
+                     BLRectI(static_cast<int>(sx), static_cast<int>(sy),
+                             static_cast<int>(sw), static_cast<int>(sh)));
+      break;
+    }
+    default:
+      throw qjs::Exception();
+  }
+  return qjs::Value::GetUndefined();
 }
-qjs::Value CreateImageData([[maybe_unused]] qjs::Context &ctx,
-                           [[maybe_unused]] Context *c2d,
-                           [[maybe_unused]] qjs::ValueIter first,
-                           [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+
+qjs::Value CreateImageData(qjs::Context &ctx, [[maybe_unused]] Context *c2d,
+                           const qjs::ArgumentList &args) {
+  int w = 0, h = 0;
+  if (args.size() == 1) {
+    JSValue data_obj = args[0].cobj();
+    JSValue wv = JS_GetPropertyStr(ctx.cobj(), data_obj, "width");
+    JSValue hv = JS_GetPropertyStr(ctx.cobj(), data_obj, "height");
+    JS_ToInt32(ctx.cobj(), &w, wv);
+    JS_ToInt32(ctx.cobj(), &h, hv);
+    JS_FreeValue(ctx.cobj(), wv);
+    JS_FreeValue(ctx.cobj(), hv);
+  } else if (args.size() >= 2) {
+    w = std::abs(args.Get<int>(0, ctx));
+    h = std::abs(args.Get<int>(1, ctx));
+  } else {
+    throw qjs::Exception();
+  }
+  if (w <= 0 || h <= 0) {
+    throw qjs::Exception();
+  }
+
+  size_t length = static_cast<size_t>(w) * static_cast<size_t>(h) * 4;
+  JSValue len_val = JS_NewInt32(ctx.cobj(), static_cast<int32_t>(length));
+  JSValue ta = JS_NewTypedArray(ctx.cobj(), 1, &len_val, JS_TYPED_ARRAY_UINT8C);
+  JS_FreeValue(ctx.cobj(), len_val);
+  if (JS_IsException(ta)) throw qjs::Exception();
+
+  JSValue img_data = JS_NewObject(ctx.cobj());
+  JS_SetPropertyStr(ctx.cobj(), img_data, "width", JS_NewInt32(ctx.cobj(), w));
+  JS_SetPropertyStr(ctx.cobj(), img_data, "height", JS_NewInt32(ctx.cobj(), h));
+  JS_SetPropertyStr(ctx.cobj(), img_data, "data", ta);
+  return qjs::Value(img_data);
 }
-qjs::Value GetImageData([[maybe_unused]] qjs::Context &ctx,
-                        [[maybe_unused]] Context *c2d,
-                        [[maybe_unused]] qjs::ValueIter first,
-                        [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+
+qjs::Value GetImageData(qjs::Context &ctx, Context *c2d,
+                        const qjs::ArgumentList &args) {
+  if (args.size() < 4) throw qjs::Exception();
+  int sx = static_cast<int>(args.Get<double>(0, ctx));
+  int sy = static_cast<int>(args.Get<double>(1, ctx));
+  int sw = static_cast<int>(std::abs(args.Get<double>(2, ctx)));
+  int sh = static_cast<int>(std::abs(args.Get<double>(3, ctx)));
+  if (sw <= 0 || sh <= 0) throw qjs::Exception();
+
+  ImageDataBuffer buf = c2d->GetImageData(sx, sy, sw, sh);
+
+  size_t length = static_cast<size_t>(sw) * static_cast<size_t>(sh) * 4;
+  JSValue len_val = JS_NewInt32(ctx.cobj(), static_cast<int32_t>(length));
+  JSValue ta = JS_NewTypedArray(ctx.cobj(), 1, &len_val, JS_TYPED_ARRAY_UINT8C);
+  JS_FreeValue(ctx.cobj(), len_val);
+  if (JS_IsException(ta)) throw qjs::Exception();
+
+  size_t byte_offset = 0, byte_length = 0, bytes_per_element = 0;
+  JSValue array_buf = JS_GetTypedArrayBuffer(ctx.cobj(), ta, &byte_offset,
+                                             &byte_length, &bytes_per_element);
+  if (!JS_IsException(array_buf)) {
+    size_t ab_size = 0;
+    uint8_t *raw = JS_GetArrayBuffer(ctx.cobj(), &ab_size, array_buf);
+    if (raw && !buf.data.empty()) {
+      std::memcpy(raw + byte_offset, buf.data.data(),
+                  std::min(buf.data.size(), byte_length));
+    }
+    JS_FreeValue(ctx.cobj(), array_buf);
+  }
+
+  JSValue img_data = JS_NewObject(ctx.cobj());
+  JS_SetPropertyStr(ctx.cobj(), img_data, "width", JS_NewInt32(ctx.cobj(), sw));
+  JS_SetPropertyStr(ctx.cobj(), img_data, "height",
+                    JS_NewInt32(ctx.cobj(), sh));
+  JS_SetPropertyStr(ctx.cobj(), img_data, "data", ta);
+  return qjs::Value(img_data);
 }
-qjs::Value PutImageData([[maybe_unused]] qjs::Context &ctx,
-                        [[maybe_unused]] Context *c2d,
-                        [[maybe_unused]] qjs::ValueIter first,
-                        [[maybe_unused]] qjs::ValueIter last) {
-  throw qjs::Exception();
+
+qjs::Value PutImageData(qjs::Context &ctx, Context *c2d,
+                        const qjs::ArgumentList &args) {
+  if (args.size() < 3) throw qjs::Exception();
+  JSValue data_obj = args[0].cobj();
+  int dx = static_cast<int>(args.Get<double>(1, ctx));
+  int dy = static_cast<int>(args.Get<double>(2, ctx));
+
+  JSValue width_val = JS_GetPropertyStr(ctx.cobj(), data_obj, "width");
+  JSValue height_val = JS_GetPropertyStr(ctx.cobj(), data_obj, "height");
+  JSValue data_arr = JS_GetPropertyStr(ctx.cobj(), data_obj, "data");
+
+  int w = 0, h = 0;
+  JS_ToInt32(ctx.cobj(), &w, width_val);
+  JS_ToInt32(ctx.cobj(), &h, height_val);
+  JS_FreeValue(ctx.cobj(), width_val);
+  JS_FreeValue(ctx.cobj(), height_val);
+
+  if (w <= 0 || h <= 0) {
+    JS_FreeValue(ctx.cobj(), data_arr);
+    return qjs::Value::GetUndefined();
+  }
+
+  int dirty_x = 0, dirty_y = 0, dirty_w = w, dirty_h = h;
+  if (args.size() >= 7) {
+    dirty_x = static_cast<int>(args.Get<double>(3, ctx));
+    dirty_y = static_cast<int>(args.Get<double>(4, ctx));
+    dirty_w = static_cast<int>(args.Get<double>(5, ctx));
+    dirty_h = static_cast<int>(args.Get<double>(6, ctx));
+  }
+
+  size_t byte_offset = 0, byte_length = 0, bytes_per_element = 0;
+  JSValue array_buf = JS_GetTypedArrayBuffer(ctx.cobj(), data_arr, &byte_offset,
+                                             &byte_length, &bytes_per_element);
+  if (!JS_IsException(array_buf)) {
+    size_t ab_size = 0;
+    uint8_t *raw = JS_GetArrayBuffer(ctx.cobj(), &ab_size, array_buf);
+    if (raw) {
+      ImageDataBuffer buf;
+      buf.width = w;
+      buf.height = h;
+      buf.data.assign(raw + byte_offset, raw + byte_offset + byte_length);
+      c2d->PutImageData(buf, dx, dy,
+                        BLRectI(dirty_x, dirty_y, dirty_w, dirty_h));
+    }
+    JS_FreeValue(ctx.cobj(), array_buf);
+  }
+  JS_FreeValue(ctx.cobj(), data_arr);
+  return qjs::Value::GetUndefined();
 }
+
 qjs::Value SetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
                        qjs::ValueIter last) {
   if (first == last) throw qjs::Exception();
@@ -754,38 +887,84 @@ qjs::Value GetLineDash(qjs::Context &ctx, Context *c2d, qjs::ValueIter first,
   return qjs::Value(arr);
 }
 
+qjs::Value GetImageSmoothingEnabled(qjs::Context &ctx, Context *c2d) {
+  return ctx.Get(c2d->GetImageSmoothingEnabled());
+}
+
+void SetImageSmoothingEnabled(qjs::Context &ctx, Context *c2d, qjs::Value val) {
+  c2d->SetImageSmoothingEnabled(val.Get<bool>(ctx));
+}
+
+qjs::Value GetImageSmoothingQuality(qjs::Context &ctx,
+                                    [[maybe_unused]] Context *c2d) {
+  return ctx.Get("low");
+}
+
+void SetImageSmoothingQuality([[maybe_unused]] qjs::Context &ctx,
+                              [[maybe_unused]] Context *c2d,
+                              [[maybe_unused]] qjs::Value val) {}
+
 qjs::Value CreateCanvas(qjs::Context &ctx,
                         [[maybe_unused]] qjs::Value this_value,
-                        qjs::ValueIter first, qjs::ValueIter last) {
+                        const qjs::ArgumentList &args) {
   log::debug("createCanvas");
-  auto ptr = quickjs::New<Canvas>(ctx, first, last);
+  int width = args.GetOr<int>(0, ctx, 300);
+  int height = args.GetOr<int>(1, ctx, 150);
+  auto ptr = qjs::Runtime::GetInstance().Ctor<Canvas>(width, height);
   auto canvas = qjs::RcValue(
       ctx, ctx.CreateOpaque<Canvas>(std::move(ptr), qjs::Value::GetNull()));
 
   return canvas.Take().cobj();
 }
 
-qjs::Value GetContext(qjs::Context &ctx, Canvas *canvas,
-                      [[maybe_unused]] qjs::ValueIter first,
-                      [[maybe_unused]] qjs::ValueIter last) {
+qjs::Value GetContext(qjs::Context &ctx, qjs::Value this_val, Canvas *canvas,
+                      const qjs::ArgumentList &args) {
   log::debug("getContext");
+  if (args.empty() || args.Get<std::string>(0, ctx) != "2d") {
+    return qjs::Value::GetNull();
+  }
 
-  auto ptr = qjs::Runtime::GetInstance().Ctor<Context>(canvas->CreateContext());
-  return ctx.CreateOpaque<Context>(std::move(ptr), qjs::Value::GetNull())
-      .cobj();
+  JSValue cached = JS_GetPropertyStr(ctx.cobj(), this_val.cobj(), "_context2d");
+  if (!JS_IsUndefined(cached) && !JS_IsNull(cached)) {
+    return qjs::Value(cached);
+  }
+  JS_FreeValue(ctx.cobj(), cached);
+
+  auto ptr = qjs::Runtime::GetInstance().Ctor<Context>(canvas);
+  auto obj = ctx.CreateOpaque<Context>(std::move(ptr), qjs::Value::GetNull());
+
+  JS_DefinePropertyValueStr(ctx.cobj(), obj.cobj(), "canvas",
+                            JS_DupValue(ctx.cobj(), this_val.cobj()),
+                            JS_PROP_ENUMERABLE | JS_PROP_CONFIGURABLE);
+  JS_SetPropertyStr(ctx.cobj(), this_val.cobj(), "_context2d",
+                    JS_DupValue(ctx.cobj(), obj.cobj()));
+  return obj;
 }
 
 qjs::Value get_width(qjs::Context &ctx, Canvas *canvas) {
-  return ctx.Get(canvas->Impl().width());
+  return ctx.Get(canvas->width());
 }
 
-void set_width(qjs::Context &, Canvas *, qjs::Value) {}
+void set_width(qjs::Context &ctx, Canvas *canvas, qjs::Value v) {
+  canvas->SetWidth(v.Get<int>(ctx));
+}
 
 qjs::Value get_height(qjs::Context &ctx, Canvas *canvas) {
-  return ctx.Get(canvas->Impl().height());
+  return ctx.Get(canvas->height());
 }
 
-void set_height(qjs::Context &, Canvas *, qjs::Value) {}
+void set_height(qjs::Context &ctx, Canvas *canvas, qjs::Value v) {
+  canvas->SetHeight(v.Get<int>(ctx));
+}
+
+qjs::Value ToDataURL(qjs::Context &ctx, Canvas *canvas,
+                     const qjs::ArgumentList &args) {
+  std::string type = "image/png";
+  if (!args.empty() && args[0].InstanceOf<std::string>()) {
+    type = args.Get<std::string>(0, ctx);
+  }
+  return ctx.Get(canvas->ToDataURL(type));
+}
 
 qjs::Value get_type(qjs::Context &ctx, Canvas *) { return ctx.Get("image"); }
 

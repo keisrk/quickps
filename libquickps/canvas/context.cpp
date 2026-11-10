@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <libquickps/canvas/facade.hpp>
+#include <libquickps/canvas/image.hpp>
 #include <numbers>
 #include <utility>
 
@@ -72,9 +73,41 @@ void DrawWithClipMask(BLContext &ctx, const std::optional<BLImage> &clip_mask,
 
 }  // namespace
 
+Context::Context(Canvas *canvas) : canvas_(canvas), context_() {
+  if (canvas_ && !canvas_->Impl().is_empty()) {
+    context_.begin(canvas_->Impl());
+    Impl().set_fill_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+    Impl().set_stroke_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+  }
+  if (canvas_) {
+    canvas_->RegisterContext(this);
+  }
+}
+
 Context::Context(BLContext ctx) : context_(std::move(ctx)) {
   Impl().set_fill_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
   Impl().set_stroke_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+Context::~Context() {
+  if (canvas_) {
+    canvas_->UnregisterContext(this);
+    canvas_ = nullptr;
+  }
+}
+
+void Context::Rebind() {
+  context_.end();
+  if (canvas_ && !canvas_->Impl().is_empty()) {
+    context_.begin(canvas_->Impl());
+    Impl().set_fill_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+    Impl().set_stroke_style(BLRgba(0.0f, 0.0f, 0.0f, 1.0f));
+  }
+  path_.clear();
+  clip_mask_.reset();
+  clip_stack_.clear();
+  text_state_ = TextState{};
+  text_state_stack_.clear();
 }
 
 BLContext &Context::Impl() { return context_; }
@@ -610,38 +643,163 @@ TextMetricsResult Context::MeasureText(const std::string &text) {
   res.em_height_descent = fm.descent + offset.y;
   return res;
 }
-void Context::DrawImage([[maybe_unused]] double image,
-                        [[maybe_unused]] double dx,
-                        [[maybe_unused]] double dy) {}
-void Context::DrawImage([[maybe_unused]] double image,
-                        [[maybe_unused]] double dx, [[maybe_unused]] double dy,
-                        [[maybe_unused]] double dw,
-                        [[maybe_unused]] double dh) {}
-void Context::DrawImage([[maybe_unused]] double image,
-                        [[maybe_unused]] double sx, [[maybe_unused]] double sy,
-                        [[maybe_unused]] double sw, [[maybe_unused]] double sh,
-                        [[maybe_unused]] double dx, [[maybe_unused]] double dy,
-                        [[maybe_unused]] double dw,
-                        [[maybe_unused]] double dh) {}
-void Context::CreateImageData([[maybe_unused]] double sw,
-                              [[maybe_unused]] double sh) {
-  throw Unimplemented();
+void Context::DrawImage(const BLImage &image, double dx, double dy) {
+  if (image.is_empty()) return;
+  BLRect dst(dx, dy, static_cast<double>(image.width()),
+             static_cast<double>(image.height()));
+  BLRectI src(0, 0, image.width(), image.height());
+  DrawImage(image, dst, src);
 }
-void Context::CreateImageData([[maybe_unused]] double imagedata) {
-  throw Unimplemented();
+
+void Context::DrawImage(const BLImage &image, const BLRect &dst) {
+  if (image.is_empty()) return;
+  BLRectI src(0, 0, image.width(), image.height());
+  DrawImage(image, dst, src);
 }
-void Context::GetImageData([[maybe_unused]] double sx,
-                           [[maybe_unused]] double sy,
-                           [[maybe_unused]] double sw,
-                           [[maybe_unused]] double sh) {}
-void Context::PutImageData([[maybe_unused]] double imagedata,
-                           [[maybe_unused]] double dx,
-                           [[maybe_unused]] double dy,
-                           [[maybe_unused]] double dirtyX,
-                           [[maybe_unused]] double dirtyY,
-                           [[maybe_unused]] double dirtyWidth,
-                           [[maybe_unused]] double dirtyHeight) {}
-void Context::SetLineDash([[maybe_unused]] double array) {}
+
+void Context::DrawImage(const BLImage &image, const BLRect &dst,
+                        const BLRectI &src) {
+  if (image.is_empty() || dst.w <= 0.0 || dst.h <= 0.0 || src.w <= 0 ||
+      src.h <= 0) {
+    return;
+  }
+  DrawWithClipMask(Impl(), clip_mask_,
+                   [&](BLContext &ctx) { ctx.blit_image(dst, image, src); });
+}
+
+ImageDataBuffer Context::GetImageData(int sx, int sy, int sw, int sh) {
+  ImageDataBuffer result;
+  result.width = sw;
+  result.height = sh;
+  result.data.resize(static_cast<size_t>(sw) * static_cast<size_t>(sh) * 4, 0);
+
+  if (!canvas_ || canvas_->Impl().is_empty()) {
+    return result;
+  }
+
+  Impl().flush(BL_CONTEXT_FLUSH_SYNC);
+
+  BLImageData img_data{};
+  if (canvas_->Impl().get_data(&img_data) != BL_SUCCESS ||
+      !img_data.pixel_data) {
+    return result;
+  }
+
+  for (int y = 0; y < sh; ++y) {
+    int src_y = sy + y;
+    for (int x = 0; x < sw; ++x) {
+      int src_x = sx + x;
+      size_t dst_idx = (static_cast<size_t>(y) * static_cast<size_t>(sw) +
+                        static_cast<size_t>(x)) *
+                       4;
+      if (src_x < 0 || src_x >= img_data.size.w || src_y < 0 ||
+          src_y >= img_data.size.h) {
+        result.data[dst_idx + 0] = 0;
+        result.data[dst_idx + 1] = 0;
+        result.data[dst_idx + 2] = 0;
+        result.data[dst_idx + 3] = 0;
+        continue;
+      }
+
+      const uint8_t *row = static_cast<const uint8_t *>(img_data.pixel_data) +
+                           src_y * img_data.stride;
+      uint32_t px = *reinterpret_cast<const uint32_t *>(row + src_x * 4);
+      uint8_t a = (px >> 24) & 0xFF;
+      uint8_t r = (px >> 16) & 0xFF;
+      uint8_t g = (px >> 8) & 0xFF;
+      uint8_t b = px & 0xFF;
+
+      if (a == 0) {
+        result.data[dst_idx + 0] = 0;
+        result.data[dst_idx + 1] = 0;
+        result.data[dst_idx + 2] = 0;
+        result.data[dst_idx + 3] = 0;
+      } else if (a == 255) {
+        result.data[dst_idx + 0] = r;
+        result.data[dst_idx + 1] = g;
+        result.data[dst_idx + 2] = b;
+        result.data[dst_idx + 3] = 255;
+      } else {
+        result.data[dst_idx + 0] = static_cast<uint8_t>((r * 255 + a / 2) / a);
+        result.data[dst_idx + 1] = static_cast<uint8_t>((g * 255 + a / 2) / a);
+        result.data[dst_idx + 2] = static_cast<uint8_t>((b * 255 + a / 2) / a);
+        result.data[dst_idx + 3] = a;
+      }
+    }
+  }
+
+  return result;
+}
+
+void Context::PutImageData(const ImageDataBuffer &data, int dx, int dy,
+                           const BLRectI &dirty_rect) {
+  if (!canvas_ || canvas_->Impl().is_empty() || data.width <= 0 ||
+      data.height <= 0) {
+    return;
+  }
+
+  Impl().flush(BL_CONTEXT_FLUSH_SYNC);
+
+  BLImageData img_data{};
+  if (canvas_->Impl().make_mutable(&img_data) != BL_SUCCESS ||
+      !img_data.pixel_data) {
+    return;
+  }
+
+  int start_x = std::max(0, dirty_rect.x);
+  int start_y = std::max(0, dirty_rect.y);
+  int end_x = std::min(data.width, dirty_rect.x + dirty_rect.w);
+  int end_y = std::min(data.height, dirty_rect.y + dirty_rect.h);
+
+  for (int y = start_y; y < end_y; ++y) {
+    int target_y = dy + y;
+    if (target_y < 0 || target_y >= img_data.size.h) continue;
+
+    uint8_t *row = static_cast<uint8_t *>(img_data.pixel_data) +
+                   target_y * img_data.stride;
+
+    for (int x = start_x; x < end_x; ++x) {
+      int target_x = dx + x;
+      if (target_x < 0 || target_x >= img_data.size.w) continue;
+
+      size_t src_idx =
+          (static_cast<size_t>(y) * static_cast<size_t>(data.width) +
+           static_cast<size_t>(x)) *
+          4;
+      if (src_idx + 3 >= data.data.size()) continue;
+
+      uint8_t r = data.data[src_idx + 0];
+      uint8_t g = data.data[src_idx + 1];
+      uint8_t b = data.data[src_idx + 2];
+      uint8_t a = data.data[src_idx + 3];
+
+      uint32_t px;
+      if (a == 0) {
+        px = 0;
+      } else if (a == 255) {
+        px = (255u << 24) | (static_cast<uint32_t>(r) << 16) |
+             (static_cast<uint32_t>(g) << 8) | static_cast<uint32_t>(b);
+      } else {
+        uint32_t pr = (static_cast<uint32_t>(r) * a + 127) / 255;
+        uint32_t pg = (static_cast<uint32_t>(g) * a + 127) / 255;
+        uint32_t pb = (static_cast<uint32_t>(b) * a + 127) / 255;
+        px = (static_cast<uint32_t>(a) << 24) | (pr << 16) | (pg << 8) | pb;
+      }
+
+      *reinterpret_cast<uint32_t *>(row + target_x * 4) = px;
+    }
+  }
+}
+
+bool Context::GetImageSmoothingEnabled() const {
+  return image_smoothing_enabled_;
+}
+
+void Context::SetImageSmoothingEnabled(bool enabled) {
+  image_smoothing_enabled_ = enabled;
+  Impl().set_pattern_quality(enabled ? BL_PATTERN_QUALITY_BILINEAR
+                                     : BL_PATTERN_QUALITY_NEAREST);
+}
 
 void Context::SetLineDash(const std::vector<double> &segments) {
   for (double v : segments) {
@@ -910,21 +1068,66 @@ void Context::SetLetterSpacing(const std::string &spacing) {
   }
 }
 
-Canvas::Canvas(int width, int height) {
+Canvas::Canvas(int width, int height) : width_(width), height_(height) {
   constexpr int kMaxCanvasDimension = 16384;
-  if (width <= 0 || height <= 0 || width > kMaxCanvasDimension ||
-      height > kMaxCanvasDimension) {
+  if (width_ > kMaxCanvasDimension || height_ > kMaxCanvasDimension) {
     throw quickjs::Exception();
   }
-  if (surface_.create(width, height, BL_FORMAT_PRGB32) != BL_SUCCESS) {
-    throw quickjs::Exception();
+  if (width_ > 0 && height_ > 0) {
+    if (surface_.create(width_, height_, BL_FORMAT_PRGB32) != BL_SUCCESS) {
+      throw quickjs::Exception();
+    }
+    BLContext(surface_).clear_all();
   }
-  BLContext(surface_).clear_all();
+}
+
+Canvas::~Canvas() {
+  if (active_context_) {
+    active_context_->DetachCanvas();
+    active_context_ = nullptr;
+  }
+}
+
+void Canvas::SetWidth(int w) {
+  if (width_ == w) return;
+  width_ = (w < 0) ? 0 : w;
+  if (width_ > 0 && height_ > 0) {
+    surface_.create(width_, height_, BL_FORMAT_PRGB32);
+    BLContext(surface_).clear_all();
+  } else {
+    surface_.reset();
+  }
+  if (active_context_) {
+    active_context_->Rebind();
+  }
+}
+
+void Canvas::SetHeight(int h) {
+  if (height_ == h) return;
+  height_ = (h < 0) ? 0 : h;
+  if (width_ > 0 && height_ > 0) {
+    surface_.create(width_, height_, BL_FORMAT_PRGB32);
+    BLContext(surface_).clear_all();
+  } else {
+    surface_.reset();
+  }
+  if (active_context_) {
+    active_context_->Rebind();
+  }
+}
+
+void Canvas::RegisterContext(Context *ctx) { active_context_ = ctx; }
+
+void Canvas::UnregisterContext(Context *ctx) {
+  if (active_context_ == ctx) {
+    active_context_ = nullptr;
+  }
 }
 
 BLImage &Canvas::Impl() { return surface_; }
+const BLImage &Canvas::Impl() const { return surface_; }
 
-const Context Canvas::CreateContext() { return Context(BLContext(surface_)); }
+const Context Canvas::CreateContext() { return Context(this); }
 
 const char *Canvas::GetAttribute([[maybe_unused]] const char *attr) {
   return "nope";
@@ -938,12 +1141,69 @@ void Canvas::Write(std::filesystem::path &png) {
   }
 }
 
+std::string Canvas::ToDataURL(const std::string &type) {
+  if (surface_.is_empty()) {
+    return "data:image/png;base64,";
+  }
+  std::string codec_name = "PNG";
+  std::string mime = "image/png";
+  if (type == "image/jpeg" || type == "image/jpg") {
+    codec_name = "JPEG";
+    mime = "image/jpeg";
+  } else if (type == "image/bmp") {
+    codec_name = "BMP";
+    mime = "image/bmp";
+  }
+
+  BLImageCodec codec;
+  if (codec.find_by_name(codec_name.c_str()) != BL_SUCCESS) {
+    codec.find_by_name("PNG");
+    mime = "image/png";
+  }
+
+  BLArray<uint8_t> buffer;
+  if (surface_.write_to_data(buffer, codec) != BL_SUCCESS) {
+    return "";
+  }
+
+  return "data:" + mime + ";base64," +
+         Base64Encode(buffer.data(), buffer.size());
+}
+
 quickjs::Entry &Canvas::CreateCanvas() {
   static quickjs::Entry kEntry = quickjs::EntryBuilder<>()
-                                     .Name("createContext")
+                                     .Name("createCanvas")
                                      .Func<facade::CreateCanvas>(3)
                                      .Build();
   return kEntry;
+}
+
+static int CanvasModuleInit(JSContext *js_ctx, JSModuleDef *m) {
+  quickjs::Context ctx(js_ctx);
+  auto canvas_ctor = ctx.Register<Canvas>(quickjs::GetClass<Canvas>());
+  JS_SetModuleExport(js_ctx, m, "Canvas", canvas_ctor.Take().cobj());
+
+  auto ctx_ctor = ctx.Register<Context>(quickjs::GetClass<Context>());
+  JS_SetModuleExport(js_ctx, m, "CanvasRenderingContext2D",
+                     ctx_ctor.Take().cobj());
+
+  auto img_ctor = ctx.Register<Image>(quickjs::GetClass<Image>());
+  JS_SetModuleExport(js_ctx, m, "Image", img_ctor.Take().cobj());
+
+  auto create_canvas = ctx.Register(Canvas::CreateCanvas());
+  JS_SetModuleExport(js_ctx, m, "createCanvas", create_canvas.Take().cobj());
+
+  return 0;
+}
+
+void RegisterCanvasModule(quickjs::Context &ctx) {
+  JSModuleDef *m = JS_NewCModule(ctx.cobj(), "canvas", CanvasModuleInit);
+  if (m) {
+    JS_AddModuleExport(ctx.cobj(), m, "Canvas");
+    JS_AddModuleExport(ctx.cobj(), m, "CanvasRenderingContext2D");
+    JS_AddModuleExport(ctx.cobj(), m, "Image");
+    JS_AddModuleExport(ctx.cobj(), m, "createCanvas");
+  }
 }
 
 }  // namespace canvas
@@ -1151,6 +1411,32 @@ const Class &GetClass<canvas::Context>() {
                      .Name("measureText")
                      .Method<MeasureText>(1)
                      .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("drawImage")
+                     .Method<DrawImage>(9)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("createImageData")
+                     .Method<CreateImageData>(2)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("getImageData")
+                     .Method<GetImageData>(4)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("putImageData")
+                     .Method<PutImageData>(7)
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("imageSmoothingEnabled")
+                     .Getter<GetImageSmoothingEnabled>()
+                     .Setter<SetImageSmoothingEnabled>()
+                     .Build())
+          .Proto(EntryBuilder<canvas::Context>()
+                     .Name("imageSmoothingQuality")
+                     .Getter<GetImageSmoothingQuality>()
+                     .Setter<SetImageSmoothingQuality>()
+                     .Build())
           .Build();
 
   return kClass;
@@ -1165,7 +1451,7 @@ New<canvas::Context>(Context &ctx, ValueIter first, ValueIter last) {
     throw Exception();
   }
 
-  return Runtime::GetInstance().Ctor<canvas::Context>(canvas->CreateContext());
+  return Runtime::GetInstance().Ctor<canvas::Context>(canvas);
 }
 
 template <>
@@ -1190,6 +1476,10 @@ const Class &GetClass<canvas::Canvas>() {
                                        .Name("type")
                                        .Getter<get_type>()
                                        .Setter<set_type>()
+                                       .Build())
+                            .Proto(EntryBuilder<canvas::Canvas>()
+                                       .Name("toDataURL")
+                                       .Method<ToDataURL>(1)
                                        .Build())
                             .Proto(EntryBuilder<canvas::Canvas>()
                                        .Name("getAttribute")
@@ -1221,12 +1511,16 @@ const Class &GetClass<canvas::Canvas>() {
 template <>
 std::unique_ptr<canvas::Canvas, OpaqueDeleter<canvas::Canvas>>
 New<canvas::Canvas>(Context &ctx, ValueIter first, ValueIter last) {
-  auto width = first++->Get<int>(ctx);
-  auto height = first++->Get<int>(ctx);
-  [[maybe_unused]] auto type = first++->Get<std::string>(ctx);
-
+  int width = 0;
+  int height = 0;
   if (first != last) {
-    throw Exception();
+    width = first++->Get<int>(ctx);
+  }
+  if (first != last) {
+    height = first++->Get<int>(ctx);
+  }
+  if (first != last) {
+    first++;
   }
 
   return Runtime::GetInstance().Ctor<canvas::Canvas>(width, height);

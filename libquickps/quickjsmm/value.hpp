@@ -121,6 +121,31 @@ class ArgumentList {
   ValueIter begin();
   ValueIter end();
 
+  size_t size() const noexcept {
+    return argc_ > 0 ? static_cast<size_t>(argc_) : 0;
+  }
+  bool empty() const noexcept { return argc_ <= 0; }
+
+  Value operator[](size_t i) const {
+    if (i >= size()) {
+      throw Exception();
+    }
+    return Value(js_values_[i]);
+  }
+
+  template <typename T>
+  T Get(size_t i, ContextProvider &ctx) const {
+    return (*this)[i].Get<T>(ctx);
+  }
+
+  template <typename T>
+  T GetOr(size_t i, ContextProvider &ctx, T default_value) const {
+    if (i >= size() || (*this)[i].IsUndefined()) {
+      return default_value;
+    }
+    return (*this)[i].Get<T>(ctx);
+  }
+
  private:
   int argc_;
   JSValue *js_values_;

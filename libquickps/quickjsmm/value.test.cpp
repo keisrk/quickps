@@ -59,6 +59,19 @@ TEST_F(QuickJsValueTest, TypedGetters) {
   EXPECT_EQ(it, args.end());
 }
 
+TEST_F(QuickJsValueTest, ArgumentListIndexedAccess) {
+  ContextProvider &ctx = *this;
+  ArgumentList args(kArgCount, js_values_);
+  EXPECT_EQ(args.size(), 5);
+  EXPECT_FALSE(args.empty());
+  EXPECT_TRUE(args.Get<bool>(0, ctx));
+  EXPECT_EQ(args.Get<int>(1, ctx), 42);
+  EXPECT_EQ(args.Get<int>(2, ctx), 42);
+  EXPECT_EQ(args.Get<double>(3, ctx), 3.14);
+  EXPECT_EQ(args.Get<std::string>(4, ctx), "Hello QuickJS");
+  EXPECT_EQ(args.GetOr<int>(10, ctx, 999), 999);
+}
+
 TEST_F(QuickJsValueTest, RcValueAndString) {
   ContextProvider &ctx = *this;
   std::string json(R"({ "width": 600, "height": 480, "type": "image" })");

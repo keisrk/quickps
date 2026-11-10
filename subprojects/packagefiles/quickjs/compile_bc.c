@@ -5,6 +5,14 @@
 #include "quickjs-libc.h"
 #include "quickjs.h"
 
+static int js_module_dummy_init(JSContext *ctx, JSModuleDef *m) { return 0; }
+
+static JSModuleDef *compile_bc_module_loader(JSContext *ctx,
+                                             const char *module_name,
+                                             void *opaque) {
+  return JS_NewCModule(ctx, module_name, js_module_dummy_init);
+}
+
 int main(int argc, char **argv) {
   if (argc != 3) {
     fprintf(stderr, "Usage: %s <input.js> <output.bc>\n", argv[0]);
@@ -17,6 +25,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   JS_SetStripInfo(rt, 1);
+  JS_SetModuleLoaderFunc(rt, NULL, compile_bc_module_loader, NULL);
   JSContext *ctx = JS_NewContext(rt);
   if (!ctx) {
     fprintf(stderr, "Failed to create JS context\n");

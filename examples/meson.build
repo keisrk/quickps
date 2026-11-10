@@ -41,6 +41,7 @@ sources = files(
     'src/crane.js',
     'src/cube.js',
     'src/logo.js',
+    'src/smiley.js',
 )
 
 paperscripts = []
@@ -57,6 +58,7 @@ foreach src : sources
             '--nodepath=@PRIVATE_DIR@',
             '--bundle',
             '--format=esm',
+            '--loader:.png=dataurl',
         ],
         depfile: fs.stem(src) + '.d',
     )
@@ -75,6 +77,11 @@ foreach js : paperscripts
     pytest_args += '--js'
     pytest_args += js
 endforeach
+
+pytest_args += [
+    '--image',
+    'smiley=@0@/smiley.png'.format(meson.current_source_dir()),
+]
 
 test(
     'integration test',

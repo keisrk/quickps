@@ -1,5 +1,6 @@
 #include <paperjs/paper.h>
 
+#include <format>
 #include <libquickps/canvas/image.hpp>
 #include <libquickps/quickps.hpp>
 
@@ -80,16 +81,25 @@ void QuickPs::FreeContext() { ctx_.reset(); }
 
 PaperScope QuickPs::CreatePaperScope() { return PaperScope(*this); }
 
+PaperCanvas QuickPs::DefineScope(const ScopeConfig &config) {
+  auto scope = CreatePaperScope();
+  return scope.DefineScope(config);
+}
+
 quickjs::Context &QuickPs::ctx() { return *ctx_.get(); }
 
 quickjs::RcValue &QuickPs::paper() { return paper_.value(); }
 
-quickjs::Value QuickPs::canvas() { return canvas_.value().Take(); }
+quickjs::Value QuickPs::canvas() {
+  return quickjs::Value(JS_DupValue(ctx_->cobj(), canvas_.value().cobj()));
+}
 
-quickjs::Value QuickPs::c2d() { return c2d_.value().Take(); }
+quickjs::Value QuickPs::c2d() {
+  return quickjs::Value(JS_DupValue(ctx_->cobj(), c2d_.value().cobj()));
+}
 
 quickjs::Value QuickPs::create_canvas() {
-  return create_canvas_.value().Take();
+  return quickjs::Value(JS_DupValue(ctx_->cobj(), create_canvas_.value().cobj()));
 }
 
 void QuickPs::RegisterImage(std::string_view id,
@@ -129,6 +139,34 @@ PaperCanvasProvider PaperScope::Inject() {
   JS_FreeValue(qps_.ctx().cobj(), ret.cobj());
 
   return PaperCanvasProvider(qps_);
+}
+
+PaperCanvas PaperScope::DefineScope(const ScopeConfig &config) {
+  for (const auto &[id, path] : config.images) {
+    qps_.RegisterImage(id, path);
+  }
+
+  auto canvas = Inject().CreateCanvas(config.width, config.height);
+
+  if (config.on_draw.has_value()) {
+    quickjs::RcValue rc_canvas(qps_.ctx(), canvas.value);
+    rc_canvas.Set("_onDraw", config.on_draw.value());
+    canvas.value = rc_canvas.Take();
+  } else if (config.output.has_value() && config.output->extension() == ".png") {
+    auto out_str = config.output->string();
+    auto fn_src = std::format(
+        "(function(c) {{ if (typeof c.write === 'function') c.write('{}'); }})",
+        out_str);
+    JSValue fn = JS_Eval(qps_.ctx().cobj(), fn_src.c_str(), fn_src.length(),
+                         "<onDraw>", JS_EVAL_TYPE_GLOBAL);
+    if (!JS_IsException(fn)) {
+      quickjs::RcValue rc_canvas(qps_.ctx(), canvas.value);
+      rc_canvas.Set("_onDraw", quickjs::Value(fn));
+      canvas.value = rc_canvas.Take();
+    }
+  }
+
+  return canvas;
 }
 
 PaperScript PaperScope::SetUp(PaperCanvas &canvas) {

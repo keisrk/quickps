@@ -30,6 +30,23 @@ TEST_F(QuickPsTest, Init) {
   EXPECT_TRUE(is_instanceof_canvas);
 }
 
+TEST_F(QuickPsTest, DefineScope) {
+  ScopeConfig config{
+      .width = 800,
+      .height = 600,
+  };
+  auto scope = qps_.CreatePaperScope();
+  auto canvas = scope.DefineScope(config);
+  auto engine = scope.SetUp(canvas);
+  EXPECT_NE(&engine, nullptr);
+
+  auto canvas_ctor = qps_.ctx().GetGlobalThis().Get("self").Get("window").Get(
+      "HTMLCanvasElement");
+  auto is_instanceof_canvas = JS_IsInstanceOf(
+      qps_.ctx().cobj(), canvas.value.cobj(), canvas_ctor.cobj());
+  EXPECT_TRUE(is_instanceof_canvas);
+}
+
 TEST_F(QuickPsTest, RegisterImageAndResolveViaRaster) {
   auto smiley_path = std::filesystem::path("examples/smiley.png");
   if (!std::filesystem::exists(smiley_path)) {

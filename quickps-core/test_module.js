@@ -1,4 +1,4 @@
-import paper, { defineCanvas, Point, Path, Color, Raster } from './qps.so';
+import paper, { defineScope, Point, Path, Color, Raster } from './qps.so';
 
 if (!paper) {
   throw new Error('paper is null or undefined');
@@ -6,12 +6,12 @@ if (!paper) {
 if (paper.PaperScript !== undefined) {
   throw new Error('PaperScript must not be present in core (qps.so)');
 }
-if (typeof defineCanvas !== 'function') {
-  throw new Error('defineCanvas is not a function');
+if (typeof defineScope !== 'function') {
+  throw new Error('defineScope is not a function');
 }
 
 let drawCalled = false;
-const canvas = defineCanvas({
+const canvas = defineScope({
   width: 300,
   height: 200,
   images: {
@@ -38,7 +38,7 @@ if (p2.x !== 100 || p2.y !== 100) {
 const rect = new Path.Rectangle([20, 20], [100, 80]);
 rect.fillColor = new Color(0, 0.5, 1);
 
-// Test Raster using pre-registered image KV from defineCanvas
+// Test Raster using pre-registered image KV from defineScope
 const raster = new Raster('smiley');
 if (!raster || raster.size.width <= 0) {
   throw new Error('Raster failed to load pre-registered image "smiley"');

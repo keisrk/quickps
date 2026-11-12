@@ -21,11 +21,20 @@ class PaperScope;
 class PaperScript;
 class PaperCanvasProvider;
 
+struct ScopeConfig {
+  int width = 640;
+  int height = 480;
+  std::optional<std::filesystem::path> output = std::nullopt;
+  std::vector<std::pair<std::string, std::filesystem::path>> images = {};
+  std::optional<quickjs::Value> on_draw = std::nullopt;
+};
+
 class QuickPs {
  public:
   void Init();
   void Terminate();
   PaperScope CreatePaperScope();
+  PaperCanvas DefineScope(const ScopeConfig &config);
   quickjs::Context &ctx();
   quickjs::Value canvas();
   quickjs::Value c2d();
@@ -54,6 +63,7 @@ class PaperScope {
  public:
   PaperScope(QuickPs &qps);
   PaperCanvasProvider Inject();
+  PaperCanvas DefineScope(const ScopeConfig &config);
   PaperScript SetUp(PaperCanvas &canvas);
 
  private:

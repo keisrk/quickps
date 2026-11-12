@@ -1,5 +1,5 @@
 import paper from 'paper-core.js';
-import { defineCanvas } from './preamble-core.js';
+import { defineScope } from './preamble-core.js';
 
 // Hook View.prototype.draw to invoke canvas._onDraw if attached
 if (paper && paper.View && paper.View.prototype) {
@@ -14,7 +14,7 @@ if (paper && paper.View && paper.View.prototype) {
 }
 
 export default paper;
-export { defineCanvas };
+export { defineScope };
 export const {
   Point,
   Size,

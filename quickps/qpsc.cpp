@@ -64,15 +64,21 @@ bool Run(
       qps.Terminate();
       return false;
     }
-    qps.RegisterImage(id, path);
   }
 
   bool success = true;
   try {
     std::ostringstream code;
     code << input_stream.rdbuf();
+
+    ScopeConfig config{
+        .width = width,
+        .height = height,
+        .output = output_path,
+        .images = images,
+    };
     auto scope = qps.CreatePaperScope();
-    auto canvas = scope.Inject().CreateCanvas(width, height);
+    auto canvas = scope.DefineScope(config);
     auto engine = scope.SetUp(canvas);
     auto exe = engine.Compile(code.str());
     engine.Execute(exe);

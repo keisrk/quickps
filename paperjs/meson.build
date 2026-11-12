@@ -33,7 +33,7 @@ paperjs_full_dep = declare_dependency(
   include_directories : inc,
   link_with : paperjs_full)
 
-# --- Flavor 2: Core (Clean JS + defineCanvas, 0 Acorn) ---
+# --- Flavor 2: Core (Clean JS + defineScope, 0 Acorn) ---
 paperjs_core_esm = custom_target('paperjs_core_esm',
   input : 'preamble-core.js',
   output : 'paper-core.js',

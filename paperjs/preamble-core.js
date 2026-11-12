@@ -1,7 +1,7 @@
 import { Document, HTMLElement } from 'nodom.js';
 import { Canvas, CanvasRenderingContext2D, Image, createCanvas } from 'canvas';
 
-export function defineCanvas(config) {
+export function defineScope(config) {
   config = config || {};
   let width = config.width || 640;
   let height = config.height || 480;

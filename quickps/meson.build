@@ -8,5 +8,5 @@ qpsc_exe = executable(
     'qpsc.cpp',
     dependencies: [quickps_dep],
     link_args: qpsc_link_args,
-    install: false,
+    install: true,
 )

@@ -966,6 +966,16 @@ qjs::Value ToDataURL(qjs::Context &ctx, Canvas *canvas,
   return ctx.Get(canvas->ToDataURL(type));
 }
 
+qjs::Value Write(qjs::Context &ctx, Canvas *canvas,
+                 const qjs::ArgumentList &args) {
+  if (args.empty()) {
+    return qjs::Value::GetNull();
+  }
+  std::filesystem::path path = args.Get<std::string>(0, ctx);
+  canvas->Write(path);
+  return qjs::Value::GetNull();
+}
+
 qjs::Value get_type(qjs::Context &ctx, Canvas *) { return ctx.Get("image"); }
 
 void set_type(qjs::Context &, Canvas *, qjs::Value) {}

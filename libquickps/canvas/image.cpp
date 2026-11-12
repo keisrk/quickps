@@ -74,9 +74,8 @@ void Image::SetSrc(const std::string &src) {
     }
     complete_ = true;
   } else {
-    // Direct filesystem access is disallowed from JavaScript runtime.
-    // Images must either be inline data: URLs or pre-registered by the host
-    // CLI.
+    // Direct filesystem access via src assignment is disallowed from JavaScript.
+    // Images must either be inline data: URLs or loaded via load(path) / pre-registered.
     surface_.reset();
     complete_ = false;
   }
@@ -154,6 +153,12 @@ Value AddEventListener([[maybe_unused]] Context &ctx,
   return Value::GetUndefined();
 }
 
+Value Load(Context &ctx, canvas::Image *img, const ArgumentList &args) {
+  if (args.empty()) return ctx.Get(false);
+  std::string path = args[0].Get<std::string>(ctx);
+  return ctx.Get(img->LoadFromFile(path));
+}
+
 }  // namespace
 
 template <>
@@ -195,6 +200,10 @@ const Class &GetClass<canvas::Image>() {
                             .Proto(EntryBuilder<canvas::Image>()
                                        .Name("addEventListener")
                                        .Method<AddEventListener>(2)
+                                       .Build())
+                            .Proto(EntryBuilder<canvas::Image>()
+                                       .Name("load")
+                                       .Method<Load>(1)
                                        .Build())
                             .Build();
 

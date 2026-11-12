@@ -103,6 +103,10 @@ void Runtime::Init() {
 #endif
 }
 
+void Runtime::Attach(JSRuntime *rt) {
+  Runtime::cobj_ = rt;
+}
+
 void Runtime::Terminate() {
   JS_RunGC(Runtime::cobj_.value());
   JS_FreeRuntime(Runtime::cobj_.value());

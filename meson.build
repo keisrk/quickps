@@ -25,6 +25,7 @@ inc = include_directories('.')
 subdir('paperjs')
 subdir('libquickps')
 subdir('quickps')
+subdir('quickps-core')
 subdir('examples')
 
 add_test_setup(

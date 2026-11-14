@@ -11,6 +11,7 @@ extern "C" {
 #pragma clang diagnostic ignored "-Wpedantic"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #pragma clang diagnostic ignored "-Wcast-function-type"
+#pragma clang diagnostic ignored "-Wc99-extensions"
 #else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

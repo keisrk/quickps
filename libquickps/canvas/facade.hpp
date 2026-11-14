@@ -125,6 +125,8 @@ qjs::Value get_type(qjs::Context &ctx, Canvas *canvas);
 void set_type(qjs::Context &, Canvas *, qjs::Value);
 qjs::Value ToDataURL(qjs::Context &ctx, Canvas *canvas,
                      const qjs::ArgumentList &args);
+qjs::Value Write(qjs::Context &ctx, Canvas *canvas,
+                 const qjs::ArgumentList &args);
 
 qjs::Value GetAttribute(qjs::Context &ctx, Canvas *canvas, qjs::ValueIter first,
                         qjs::ValueIter last);

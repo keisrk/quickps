@@ -5,6 +5,7 @@
 
 #include <exception>
 #include <filesystem>
+#include <functional>
 #include <libquickps/canvas/font.hpp>
 #include <libquickps/canvas/style.hpp>
 #include <libquickps/quickjsmm/esm.hpp>
@@ -197,14 +198,23 @@ class Canvas final {
   const Context CreateContext();
   const char *GetAttribute(const char *attr);
   bool HasAttribute(const char *attr);
-  void Write(std::filesystem::path &png);
+  void Write(const std::filesystem::path &png);
   std::string ToDataURL(const std::string &type = "image/png");
+  void SetOnDraw(std::function<void(Canvas &)> on_draw) {
+    on_draw_ = std::move(on_draw);
+  }
+  void InvokeOnDraw() {
+    if (on_draw_) {
+      on_draw_(*this);
+    }
+  }
 
  private:
   int width_ = 0;
   int height_ = 0;
   BLImage surface_;
   Context *active_context_ = nullptr;
+  std::function<void(Canvas &)> on_draw_ = nullptr;
 };
 
 void RegisterCanvasModule(quickjs::Context &ctx);

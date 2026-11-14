@@ -1135,9 +1135,9 @@ const char *Canvas::GetAttribute([[maybe_unused]] const char *attr) {
 
 bool Canvas::HasAttribute([[maybe_unused]] const char *attr) { return false; }
 
-void Canvas::Write(std::filesystem::path &png) {
+void Canvas::Write(const std::filesystem::path &png) {
   if (surface_.write_to_file(png.c_str()) != BL_SUCCESS) {
-    throw quickjs::Exception();
+    throw std::runtime_error("Failed to write image file: " + png.string());
   }
 }
 
@@ -1480,6 +1480,10 @@ const Class &GetClass<canvas::Canvas>() {
                             .Proto(EntryBuilder<canvas::Canvas>()
                                        .Name("toDataURL")
                                        .Method<ToDataURL>(1)
+                                       .Build())
+                            .Proto(EntryBuilder<canvas::Canvas>()
+                                       .Name("write")
+                                       .Method<Write>(1)
                                        .Build())
                             .Proto(EntryBuilder<canvas::Canvas>()
                                        .Name("getAttribute")

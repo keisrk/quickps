@@ -23,6 +23,7 @@ class Runtime final {
  public:
   static void Init();
   static void Terminate();
+  static void Attach(JSRuntime *rt);
   static Runtime GetInstance();
   static const std::unique_ptr<Context, ContextDeleter> CreateContext();
 

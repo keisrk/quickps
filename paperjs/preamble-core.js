@@ -1,6 +1,40 @@
 import { Document, HTMLElement } from 'nodom.js';
-import * as acorn from 'acorn.js';
 import { Canvas, CanvasRenderingContext2D, Image, createCanvas } from 'canvas';
+
+export function defineScope(config) {
+  config = config || {};
+  let width = config.width || 640;
+  let height = config.height || 480;
+  if (config.size && Array.isArray(config.size)) {
+    width = config.size[0] || width;
+    height = config.size[1] || height;
+  }
+  const cvs = createCanvas(width, height, 'image');
+  if (typeof config.onDraw === 'function') {
+    cvs._onDraw = config.onDraw;
+  }
+
+  // Pre-load and register images KV (e.g. { mona: './assets/mona.png', logo: '...' })
+  if (config.images && typeof config.images === 'object') {
+    const documentObj = globalThis.document || doc;
+    if (Array.isArray(config.images)) {
+      for (const item of config.images) {
+        if (typeof item === 'string') {
+          const id = item.replace(/^.*[\\/]/, '').replace(/\.[^/.]+$/, '');
+          documentObj.registerImage(id, item);
+        } else if (item && item.id && item.src) {
+          documentObj.registerImage(item.id, item.src);
+        }
+      }
+    } else {
+      for (const [id, src] of Object.entries(config.images)) {
+        documentObj.registerImage(id, src);
+      }
+    }
+  }
+
+  return cvs;
+}
 
 const origCreateElement = Document.prototype.createElement;
 Document.prototype.createElement = function (tagName) {
@@ -29,7 +63,13 @@ Document.prototype.registerImage = function (id, imageOrSrc) {
   if (typeof imageOrSrc === 'string') {
     img = new Image();
     img.id = id;
-    img.src = imageOrSrc;
+    if (typeof img.load === 'function') {
+      if (!img.load(imageOrSrc)) {
+        throw new Error('Failed to load image file: ' + imageOrSrc);
+      }
+    } else {
+      img.src = imageOrSrc;
+    }
   } else {
     img = imageOrSrc;
     img.id = id;
@@ -38,28 +78,21 @@ Document.prototype.registerImage = function (id, imageOrSrc) {
   return img;
 };
 
-HTMLElement.prototype.setAttributeNS = function (
-  ns,
-  name,
-  value
-) {
+HTMLElement.prototype.setAttributeNS = function (ns, name, value) {
   return this.setAttribute(name, value);
 };
 
-HTMLElement.prototype.getAttributeNS = function (
-  ns,
-  name
-) {
+HTMLElement.prototype.getAttributeNS = function (ns, name) {
   return this.getAttribute(name);
 };
 
-Document.prototype.addEventListener = function () {}
+Document.prototype.addEventListener = function () {};
 
 Document.prototype.defaultView = {
   getComputedStyle: function () {
-    return {}
+    return {};
   }
-}
+};
 
 globalThis.setInterval = function () {};
 globalThis.clearInterval = function () {};
@@ -71,7 +104,7 @@ globalThis.document = doc;
 globalThis.Image = Image;
 
 globalThis.self = {
-  acorn: acorn,
+  acorn: undefined,
   Canvas: Canvas,
   HTMLCanvasElement: Canvas,
   CanvasRenderingContext2D: CanvasRenderingContext2D,

@@ -2,7 +2,7 @@
 
 namespace {
 constexpr uint8_t kByteCode[] = {
-#embed "paper.bc"
+#embed "paper-core.bc"
 };
 }  // namespace
 

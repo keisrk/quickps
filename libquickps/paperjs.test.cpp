@@ -32,7 +32,7 @@ TEST_F(PaperJsTest, LoadByteCode) {
   EXPECT_NE(m, nullptr);
   auto module_name_obj = JS_GetModuleName(ctx->cobj(), m);
   const char *module_name = JS_AtomToCString(ctx->cobj(), module_name_obj);
-  EXPECT_STREQ(module_name, "paper.js");
+  EXPECT_STREQ(module_name, "paper-full.js");
 
   JS_FreeCString(ctx->cobj(), module_name);
   JS_FreeAtom(ctx->cobj(), module_name_obj);

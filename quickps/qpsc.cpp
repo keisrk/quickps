@@ -64,15 +64,27 @@ bool Run(
       qps.Terminate();
       return false;
     }
-    qps.RegisterImage(id, path);
   }
 
   bool success = true;
   try {
     std::ostringstream code;
     code << input_stream.rdbuf();
+
+    ScopeConfig config{
+        .width = width,
+        .height = height,
+        .images = images,
+        .on_draw =
+            [&](canvas::Canvas &cvs) {
+              if (output_path.extension() != ".svg") {
+                cvs.Write(output_path);
+              }
+            },
+    };
+
     auto scope = qps.CreatePaperScope();
-    auto canvas = scope.Inject().CreateCanvas(width, height);
+    auto canvas = scope.DefineScope(config);
     auto engine = scope.SetUp(canvas);
     auto exe = engine.Compile(code.str());
     engine.Execute(exe);
@@ -83,9 +95,6 @@ bool Run(
         return false;
       }
       output << engine.ExportSVG();
-    } else {
-      auto *canvas_ptr = qps.ctx().GetOpaque<canvas::Canvas>(canvas.value);
-      canvas_ptr->Write(output_path);
     }
   } catch ([[maybe_unused]] const quickjs::Exception &e) {
     std::cerr << qps.ctx();

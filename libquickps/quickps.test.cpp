@@ -19,8 +19,6 @@ TEST_F(QuickPsTest, Init) {
   auto scope = qps_.CreatePaperScope();
   EXPECT_NE(&scope, nullptr);
   auto canvas = scope.Inject().CreateCanvas(640, 480);
-  auto engine = scope.SetUp(canvas);
-  EXPECT_NE(&engine, nullptr);
 
   auto canvas_ctor = qps_.ctx().GetGlobalThis().Get("self").Get("window").Get(
       "HTMLCanvasElement");
@@ -28,6 +26,41 @@ TEST_F(QuickPsTest, Init) {
   auto is_instanceof_canvas = JS_IsInstanceOf(
       qps_.ctx().cobj(), canvas.value.cobj(), canvas_ctor.cobj());
   EXPECT_TRUE(is_instanceof_canvas);
+
+  auto engine = scope.SetUp(canvas);
+  EXPECT_NE(&engine, nullptr);
+}
+
+TEST_F(QuickPsTest, DefineScope) {
+  int drawn_width = 0;
+  int drawn_height = 0;
+
+  ScopeConfig config{
+      .width = 800,
+      .height = 600,
+      .on_draw =
+          [&](canvas::Canvas &cvs) {
+            drawn_width = cvs.width();
+            drawn_height = cvs.height();
+          },
+  };
+  auto scope = qps_.CreatePaperScope();
+  auto canvas = scope.DefineScope(config);
+
+  auto canvas_ctor = qps_.ctx().GetGlobalThis().Get("self").Get("window").Get(
+      "HTMLCanvasElement");
+  auto is_instanceof_canvas = JS_IsInstanceOf(
+      qps_.ctx().cobj(), canvas.value.cobj(), canvas_ctor.cobj());
+  EXPECT_TRUE(is_instanceof_canvas);
+
+  auto engine = scope.SetUp(canvas);
+  EXPECT_NE(&engine, nullptr);
+
+  auto exe = engine.Compile(
+      "var p = new Path.Circle([100, 100], 50); p.fillColor = 'red';");
+  engine.Execute(exe);
+  EXPECT_EQ(drawn_width, 800);
+  EXPECT_EQ(drawn_height, 600);
 }
 
 TEST_F(QuickPsTest, RegisterImageAndResolveViaRaster) {

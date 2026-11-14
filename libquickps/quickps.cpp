@@ -84,12 +84,16 @@ quickjs::Context &QuickPs::ctx() { return *ctx_.get(); }
 
 quickjs::RcValue &QuickPs::paper() { return paper_.value(); }
 
-quickjs::Value QuickPs::canvas() { return canvas_.value().Take(); }
+quickjs::Value QuickPs::canvas() {
+  return quickjs::Value(JS_DupValue(ctx_->cobj(), canvas_.value().cobj()));
+}
 
-quickjs::Value QuickPs::c2d() { return c2d_.value().Take(); }
+quickjs::Value QuickPs::c2d() {
+  return quickjs::Value(JS_DupValue(ctx_->cobj(), c2d_.value().cobj()));
+}
 
 quickjs::Value QuickPs::create_canvas() {
-  return create_canvas_.value().Take();
+  return quickjs::Value(JS_DupValue(ctx_->cobj(), create_canvas_.value().cobj()));
 }
 
 void QuickPs::RegisterImage(std::string_view id,
@@ -131,24 +135,61 @@ PaperCanvasProvider PaperScope::Inject() {
   return PaperCanvasProvider(qps_);
 }
 
+PaperCanvas PaperScope::DefineScope(const ScopeConfig &config) {
+  for (const auto &[id, path] : config.images) {
+    qps_.RegisterImage(id, path);
+  }
+
+  auto canvas = Inject().CreateCanvas(config.width, config.height);
+
+  if (config.on_draw) {
+    auto *canvas_ptr = qps_.ctx().GetOpaque<canvas::Canvas>(canvas.value);
+    canvas_ptr->SetOnDraw(config.on_draw);
+
+    JSCFunction *on_draw_trampoline = [](JSContext *ctx, JSValueConst, int argc,
+                                         JSValueConst *argv) -> JSValue {
+      if (argc < 1) return quickjs::Value::GetUndefined().cobj();
+      try {
+        quickjs::Context ctx_wrapper(ctx);
+        auto *cvs =
+            ctx_wrapper.GetOpaque<canvas::Canvas>(quickjs::Value(argv[0]));
+        cvs->InvokeOnDraw();
+        return quickjs::Value::GetUndefined().cobj();
+      } catch (const std::exception &e) {
+        return JS_ThrowInternalError(ctx, "%s", e.what());
+      } catch (...) {
+        return JS_ThrowInternalError(ctx, "onDraw callback failed");
+      }
+    };
+
+    JSValue fn =
+        JS_NewCFunction(qps_.ctx().cobj(), on_draw_trampoline, "_onDraw", 1);
+    quickjs::RcValue rc_canvas(qps_.ctx(), canvas.value);
+    rc_canvas.Set("_onDraw", quickjs::Value(fn));
+    canvas.value = rc_canvas.Take();
+  }
+
+  return canvas;
+}
+
 PaperScript PaperScope::SetUp(PaperCanvas &canvas) {
   auto scope = qps_.paper().Get("PaperScope");
   auto instance = quickjs::RcValue(
       qps_.ctx(),
       JS_CallConstructor(qps_.ctx().cobj(), scope.cobj(), 0, nullptr));
 
-  if (instance.IsException()) throw quickjs::Exception();
-
-  auto ret = instance.Invoke("setup", {canvas.value});
-  if (ret.IsException()) {
-    JS_FreeValue(qps_.ctx().cobj(), ret.cobj());
+  if (instance.IsException()) {
     JS_FreeValue(qps_.ctx().cobj(), canvas.value.cobj());
     throw quickjs::Exception();
-  } else {
-    JS_FreeValue(qps_.ctx().cobj(), ret.cobj());
-    JS_FreeValue(qps_.ctx().cobj(), canvas.value.cobj());
-    return PaperScript(qps_, instance.Take());
   }
+
+  auto ret = instance.Invoke("setup", {canvas.value});
+  JS_FreeValue(qps_.ctx().cobj(), ret.cobj());
+  JS_FreeValue(qps_.ctx().cobj(), canvas.value.cobj());
+  if (ret.IsException()) {
+    throw quickjs::Exception();
+  }
+  return PaperScript(qps_, instance.Take());
 }
 
 PaperScript::PaperScript(QuickPs &qps, quickjs::Value scope)
@@ -185,7 +226,7 @@ void PaperScript::Execute(const PaperExecutable &exe) {
   }
   {
     auto view = scope_.Get("project").Get("view");
-    auto ret = view.Invoke("update", {});
+    auto ret = view.Invoke("draw", {});
 
     if (ret.IsException()) {
       JS_FreeValue(qps_.ctx().cobj(), ret.cobj());

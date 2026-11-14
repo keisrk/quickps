@@ -39,12 +39,12 @@ const char *kSource = R"(
 TEST_F(E2eTest, AllTheWay) {
   auto scope = qps_.CreatePaperScope();
   auto canvas = scope.Inject().CreateCanvas(640, 480);
+  auto *canvas_ptr = qps_.ctx().GetOpaque<canvas::Canvas>(canvas.value);
   auto engine = scope.SetUp(canvas);
   auto exe = engine.Compile(kSource);
   engine.Execute(exe);
   EXPECT_TRUE(true);
 
-  auto *canvas_ptr = qps_.ctx().GetOpaque<canvas::Canvas>(canvas.value);
   std::filesystem::path output = "output.png";
   canvas_ptr->Write(output);
 }

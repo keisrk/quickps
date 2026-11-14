@@ -21,6 +21,13 @@ class PaperScope;
 class PaperScript;
 class PaperCanvasProvider;
 
+struct ScopeConfig {
+  int width = 640;
+  int height = 480;
+  std::vector<std::pair<std::string, std::filesystem::path>> images = {};
+  std::function<void(canvas::Canvas &)> on_draw = nullptr;
+};
+
 class QuickPs {
  public:
   void Init();
@@ -54,6 +61,7 @@ class PaperScope {
  public:
   PaperScope(QuickPs &qps);
   PaperCanvasProvider Inject();
+  PaperCanvas DefineScope(const ScopeConfig &config);
   PaperScript SetUp(PaperCanvas &canvas);
 
  private:

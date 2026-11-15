@@ -6,13 +6,13 @@ src = files('quickps.cpp')
 quickps = library(
     'quickps',
     src,
-    dependencies: [canvas_dep, paperjs_full_dep, quickjsmm_dep],
+    dependencies: [canvas_dep, paperjs_full_dep, quickjsmm_dep, quickjs_dep],
 )
 
 quickps_dep = declare_dependency(
     include_directories: inc,
     link_with: quickps,
-    dependencies: [canvas_dep, paperjs_full_dep, quickjsmm_dep],
+    dependencies: [canvas_dep, paperjs_full_dep, quickjsmm_dep, quickjs_dep],
 )
 
 tests = files(

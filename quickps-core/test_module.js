@@ -1,3 +1,4 @@
+import * as std from 'std';
 import paper, { defineScope, Point, Path, Color, Raster } from './qps.so';
 
 if (!paper) {
@@ -55,3 +56,9 @@ const svg = paper.project.exportSVG({ asString: true });
 if (typeof svg !== 'string' || !svg.includes('<svg') || !svg.includes('<path')) {
   throw new Error(`Invalid SVG output: ${svg}`);
 }
+const f = std.open('qps_module_test_out.svg', 'w');
+if (!f) {
+  throw new Error('std.open failed');
+}
+f.puts(svg);
+f.close();

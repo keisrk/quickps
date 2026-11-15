@@ -31,6 +31,7 @@ qjs = executable('qjs',
   'repl_stub.c',
   c_args : extra_args,
   dependencies : [quickjs_dep, m_dep, dl_dep, thread_dep],
+  export_dynamic : true,
   native : true,
 )
 meson.override_find_program('qjs', qjs)

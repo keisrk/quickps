@@ -11,7 +11,7 @@ qps_so = shared_module(
     gnu_symbol_visibility: 'hidden',
     cpp_args: ['-Wno-c99-extensions', '-Wno-unused-parameter'],
     link_args: qps_so_link_args,
-    dependencies: [canvas_dep, quickjsmm_dep, paperjs_core_dep, quickjs_dep],
+    dependencies: [canvas_dep, quickjsmm_dep, paperjs_core_dep],
     install: true,
 )
 
@@ -26,7 +26,7 @@ test_script = configure_file(
 test(
     'qps native module test',
     qjs,
-    args: ['-m', test_script],
+    args: ['--std', '-m', test_script],
     depends: [qps_so],
     workdir: meson.current_build_dir(),
 )

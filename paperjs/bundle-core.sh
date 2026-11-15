@@ -45,7 +45,7 @@ if [ ! -f "$PAPER_CORE" ]; then
     fi
 fi
 
-"$ESBUILD" --bundle --format=esm \
+"$ESBUILD" --bundle --minify --format=esm \
     --external:./node/self.js \
     --external:./node/extend.js \
     --external:canvas \

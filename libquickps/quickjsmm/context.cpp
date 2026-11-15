@@ -104,7 +104,16 @@ void Runtime::Init() {
 }
 
 void Runtime::Attach(JSRuntime *rt) {
-  Runtime::cobj_ = rt;
+  if (Runtime::cobj_ != rt) {
+    Runtime::cobj_ = rt;
+    Runtime::class_registry_.clear();
+  }
+#if defined(__SANITIZE_ADDRESS__) || \
+    (defined(__has_feature) && __has_feature(address_sanitizer))
+  JS_SetMaxStackSize(rt, 8 * JS_DEFAULT_STACK_SIZE);
+#else
+  JS_SetMaxStackSize(rt, 2 * JS_DEFAULT_STACK_SIZE);
+#endif
 }
 
 void Runtime::Terminate() {

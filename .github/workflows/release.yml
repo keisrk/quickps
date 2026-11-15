@@ -36,11 +36,17 @@ jobs:
 
       - name: Package
         run: |
-          PKG="quickps-${{ github.ref_name }}-linux-x86_64"
-          mkdir -p "$PKG"
-          cp build/quickps/qpsc LICENSE README.md "$PKG/"
-          tar -czf "$PKG.tar.gz" "$PKG"
-          sha256sum "$PKG.tar.gz" > "$PKG.tar.gz.sha256"
+          FULL_PKG="quickps-full-${{ github.ref_name }}-linux-x86_64"
+          mkdir -p "$FULL_PKG"
+          cp build/quickps/qpsc LICENSE README.md "$FULL_PKG/"
+          tar -czf "$FULL_PKG.tar.gz" "$FULL_PKG"
+          sha256sum "$FULL_PKG.tar.gz" > "$FULL_PKG.tar.gz.sha256"
+
+          CORE_PKG="quickps-core-${{ github.ref_name }}-linux-x86_64"
+          mkdir -p "$CORE_PKG"
+          cp build/quickps-core/qps.so LICENSE README.md "$CORE_PKG/"
+          tar -czf "$CORE_PKG.tar.gz" "$CORE_PKG"
+          sha256sum "$CORE_PKG.tar.gz" > "$CORE_PKG.tar.gz.sha256"
 
       - uses: actions/upload-artifact@v4
         with:

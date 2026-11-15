@@ -1,4 +1,4 @@
-qps_so_link_args = []
+qps_so_link_args = ['-Wl,--exclude-libs,ALL']
 if get_option('b_sanitize') == 'none'
     qps_so_link_args += ['-static-libstdc++', '-static-libgcc']
 endif
@@ -8,6 +8,7 @@ qps_so = shared_module(
     'qps',
     'module.cpp',
     name_prefix: '',
+    gnu_symbol_visibility: 'hidden',
     cpp_args: ['-Wno-c99-extensions', '-Wno-unused-parameter'],
     link_args: qps_so_link_args,
     dependencies: [canvas_dep, quickjsmm_dep, paperjs_core_dep, quickjs_dep],
